@@ -1,0 +1,554 @@
+:root {
+    --bg-color: #f4f4f9;
+    --text-color: #333;
+    --card-bg: #fff;
+    --nav-bg: #ffffff;
+    --border-color: #ddd;
+    --th-bg: #f8f8f8;
+    --row-hover-bg: #f1f1f1;
+    --btn-bg: #f8f8f8;
+    --btn-border: #ccc;
+    --primary-color: #007bff;
+    --primary-hover: #0056b3;
+}
+
+[data-theme="dark"] {
+    --bg-color: #121212;
+    --text-color: #e0e0e0;
+    --card-bg: #1e1e1e;
+    --nav-bg: #1e1e1e;
+    --border-color: #444;
+    --th-bg: #2c2c2c;
+    --row-hover-bg: #333;
+    --btn-bg: #333;
+    --btn-border: #555;
+    --primary-color: #3793ff;
+    --primary-hover: #5fa4ff;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color 0.2s, color 0.2s;
+}
+
+nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--nav-bg);
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 1002; /* Higher z-index than .select */
+}
+
+/* Basic Dropdown Styles */
+#preset-dropdown {
+    /* width: 100%; Not needed as it's inside build-page */
+    padding: 10px;
+    border: none; /* Remove default select border */
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    font-size: 1em;
+    cursor: pointer;
+    /* position: sticky; Not needed as it's inside build-page */
+    /* top: 0; Not needed as it's inside build-page */
+    /* z-index: 1001; Not needed as it's inside build-page */
+    text-align: center; /* Center text in the displayed option */
+    -moz-appearance: none; /* Remove default FF styles */
+    -webkit-appearance: none; /* Remove default Safari/Chrome styles */
+    appearance: none; /* Remove default styles */
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" fill="%23${encodeURIComponent(document.body.style.getPropertyValue('--text-color').substring(1))}}"><path d="M7 10l5 5 5-5z"/></svg>'); /* Custom arrow */
+    background-repeat: no-repeat;
+    background-position-x: 98%;
+    background-position-y: center;
+    width: 100%; /* Ensure it still takes full width of its parent */
+    box-sizing: border-box; /* Include padding in width */
+    margin-bottom: 20px; /* Add some space below dropdown */
+}
+
+#preset-dropdown:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+#preset-dropdown option {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    text-align: center; /* Center text in options list */
+}
+
+.basic-dropdown {
+    /* Additional styles for the basic dropdown if needed */
+}
+
+.stock-info {
+    text-align: center;
+    font-size: 0.9em;
+    color: #666;
+    margin-top: -15px; /* Adjust spacing with h2 */
+    margin-bottom: 15px;
+}
+
+.nav-left, .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.select:has(.options input[type="radio"]#all:checked) .selected::before {
+    content: attr(data-txt); /* Custom: display 'All' from data-txt if 'all' is checked */
+}
+
+/* Specific content for selected preset */
+/* This will be handled by JS to dynamically set the content of #selected-preset */
+
+.nav-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--btn-border);
+    background-color: var(--btn-bg);
+    color: var(--text-color);
+    cursor: pointer;
+    border-radius: 5px;
+    font-weight: 500;
+}
+
+.nav-btn.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.nav-btn:hover {
+    background-color: #e9e9e9;
+}
+[data-theme="dark"] .nav-btn:hover {
+    background-color: #444;
+}
+
+.nav-btn.active:hover {
+    background-color: var(--primary-hover);
+}
+
+/* Removed .import-container styling */
+/* Removed #import-date styling */
+
+#current-datetime {
+    font-size: 1.8em; /* Doubled from 0.9em */
+    color: var(--text-color);
+    margin-right: 10px; /* Space between time and theme switcher */
+}
+
+.theme-switcher {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 5px;
+}
+.theme-switcher label {
+    cursor: pointer;
+}
+#theme-toggle {
+    display: none;
+}
+
+main {
+    padding: 20px;
+}
+
+.page {
+    display: none !important;
+    overflow: hidden; /* Prevent content from spilling out */
+}
+
+.page.active {
+    display: block !important;
+}
+
+.build-container {
+    display: grid; /* Changed from flex to grid */
+    grid-template-columns: 1fr 1fr; /* Two equal columns */
+    grid-template-rows: auto; /* Allow rows to size based on content */
+    gap: 20px; /* To maintain spacing between columns and rows */
+    width: 100%; /* Ensure it takes full available width within its parent */
+}
+
+.build-section {
+    /* flex properties removed */
+    /* width properties removed */
+    /* min-width removed */
+    /* box-sizing removed */
+    background: var(--card-bg);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Modal Styling */
+.modal-overlay {
+    display: none; /* Hidden by default */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent dark overlay */
+    justify-content: center; /* These will only apply when display is flex (set by JS) */
+    align-items: center; /* These will only apply when display is flex (set by JS) */
+    z-index: 2000; /* Ensure it's above everything */
+}
+
+.modal-content {
+    background-color: var(--card-bg);
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.modal-content h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: var(--text-color);
+}
+
+#preset-name-input {
+    width: calc(100% - 20px); /* Account for padding */
+    padding: 10px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-size: 1em;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: space-around;
+    gap: 10px;
+}
+
+.modal-actions .nav-btn {
+    flex: 1; /* Make buttons take equal width */
+    padding: 10px;
+    font-size: 1em;
+}
+
+.build-section h3 {
+    margin-top: 0;
+    padding: 10px 0;
+    background-color: var(--th-bg);
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 15px; /* Added margin for spacing */
+    text-align: center; /* Center the text */
+}
+
+#summary-textbox {
+    width: 100%;
+    height: 90%; /* Adjusted height to accommodate the new title */
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    padding: 10px;
+    font-family: monospace;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+th {
+    background-color: var(--th-bg);
+}
+
+tbody tr:hover {
+    background-color: var(--row-hover-bg);
+}
+
+select {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    background-color: var(--card-bg);
+    color: var(--text-color);
+}
+
+h2 {
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    margin-top: 0;
+}
+
+.category-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.category-header h2 {
+    margin-bottom: 0;
+}
+
+#category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.category-card {
+    background: var(--card-bg);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.category-card {
+    background: var(--card-bg);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.category-card h3 {
+    margin-top: 0;
+    color: var(--primary-color);
+    margin-bottom: 15px; /* Added spacing */
+}
+
+.category-item-add-section {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    align-items: center; /* Align items vertically */
+}
+
+.new-item-code-input {
+    flex-grow: 1; /* Allow input to take available space */
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    font-size: 0.9em;
+}
+
+.add-item-btn {
+    padding: 8px 12px; /* Adjust padding for add button */
+    font-size: 0.9em;
+    flex-shrink: 0; /* Prevent button from shrinking */
+}
+
+.duplicate-warning {
+    flex-shrink: 0; /* Prevent warning from shrinking */
+}
+
+.category-items-table-container {
+    max-height: 250px; /* Limit height for scrollability */
+    overflow-y: auto; /* Enable vertical scrolling */
+    border: 1px solid var(--border-color); /* Add border around the table container */
+    border-radius: 5px;
+    background-color: var(--card-bg); /* Match card background */
+}
+
+/* Ensure table inside container stretches */
+.category-items-table-container table {
+    width: 100%;
+    border-collapse: collapse; /* Remove double borders */
+}
+
+.category-items-table-container th,
+.category-items-table-container td {
+    padding: 8px 12px; /* Smaller padding for category tables */
+    border-bottom: 1px solid var(--border-color);
+    text-align: left;
+}
+
+.category-items-table-container th {
+    background-color: var(--th-bg);
+    position: sticky; /* Make header sticky */
+    top: 0; /* Stick to the top of the container */
+    z-index: 1; /* Ensure it's above scrolling content */
+}
+
+.category-items-table-container tbody tr:last-child td {
+    border-bottom: none; /* No border for the last row */
+}
+
+.delete-item-btn {
+    padding: 5px 10px; /* Smaller padding for delete button */
+    font-size: 0.8em;
+    background-color: #dc3545; /* Red for delete */
+    color: white;
+    border: 1px solid #dc3545;
+}
+
+.delete-item-btn:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+}
+
+.inventory-sections-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Two equal columns */
+    gap: 20px;
+}
+
+.inventory-section {
+    background: var(--card-bg);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.inventory-section h2 {
+    text-align: center;
+}
+
+.inventory-filters {
+    display: flex;
+    flex-wrap: wrap; /* Allow filters to wrap if not enough space */
+    gap: 10px; /* Reduced gap for more compact layout */
+    margin-bottom: 15px;
+}
+
+.inventory-filters input {
+    flex: 1; /* Inputs take equal space */
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    font-size: 1em;
+}
+
+.inventory-filters button {
+    padding: 10px 15px; /* Match input padding */
+    border: 1px solid var(--btn-border);
+    background-color: var(--btn-bg);
+    color: var(--text-color);
+    cursor: pointer;
+    border-radius: 5px;
+    font-weight: 500;
+}
+
+/* Remove specific filter styles as they are now general */
+/* #item-code-filter {
+    width: 10%;
+    flex: none;
+}
+#description-filter {
+    flex: 1;
+} */
+
+.description-cell, .qty-cell {
+    user-select: none; /* Make the container non-selectable */
+}
+
+.description-cell div {
+    user-select: text; /* Make the content selectable */
+}
+
+#inventory-page .table-container {
+    max-height: 70vh;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.copy-icon {
+    cursor: pointer;
+    margin-left: 8px;
+    font-style: normal;
+    display: inline-block;
+}
+
+.category-actions {
+    display: flex;
+    gap: 10px;
+}
+
+#preset-editor-container {
+    margin-top: 30px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.preset-editor-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+    gap: 10px;
+}
+
+.preset-editor-row label {
+    flex-shrink: 0;
+    font-weight: 500;
+}
+
+.preset-editor-row input {
+    flex-grow: 1;
+    padding: 5px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+}
+
+.preset-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px; /* Space between header and components */
+}
+
+.preset-card-header h3 {
+    margin: 0; /* Remove default h3 margin */
+}
+
+.preset-title-input {
+    flex-grow: 1; /* Allow input to take available space */
+    margin-right: 10px; /* Space between input and icon */
+    font-size: 1.1em; /* Slightly larger for title */
+}
+
+.delete-preset-icon {
+    cursor: pointer;
+    /* float: right; Removed, handled by flexbox */
+    /* margin-left: 10px; Removed, handled by flexbox */
+    font-size: 1.2em;
+    color: #dc3545; /* Red color for delete icon */
+    transition: color 0.2s;
+    flex-shrink: 0; /* Prevent icon from shrinking */
+}
+
+.delete-preset-icon:hover {
+    color: #bd2130;
+}
+
+/* New CSS for WHS item code coloring */
+.whs-item-code {
+    color: green;
+}
+[data-theme="dark"] .whs-item-code {
+    color: #90ee90; /* Lighter green for dark theme */
+}
