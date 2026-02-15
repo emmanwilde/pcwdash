@@ -22,155 +22,272 @@ document.addEventListener('DOMContentLoaded', () => {
     let allItems = {}; // Master list of all items from Excel { "itemCode": { description, qty } }
     let branchStockData = {}; // Raw data for Branch Stock { "itemCode": { description, qty } }
     let whsStockData = {};    // Raw data for WHS Stock { "itemCode": { description, qty } }
-    let branchFileInfo = { text: '', date: '' }; // New state for Branch file info
-    let whsFileInfo = { text: '', date: '' };    // New state for WHS file info
+    let branchFileInfo = { text: '', date: '' };
+    let whsFileInfo = { text: '', date: '' };
     let categories = {}; // { "Processor": ["itemCode1", "itemCode2"], ... }
     let presets = {}; // { "Gaming Build": { "Processor": "itemcode1" }, ... }
     let buildSelections = {}; // { "Processor": "itemCode1", ... }
+    let setupData = {}; // { "itemCode": { cost: "", unbundle: "", bundle: "", qty: "" }, ... }
     let activePreset = 'CUSTOM';
-    // Removed importDate state variable
     let currentTheme = 'light';
+    let isBundleMode = true;
 
     // --- DOM ELEMENTS ---
     const pages = {
+        preview: document.getElementById('preview-page'),
         build: document.getElementById('build-page'),
         category: document.getElementById('category-page'),
         inventory: document.getElementById('inventory-page'),
+        setup: document.getElementById('setup-page'),
     };
 
     const navButtons = {
+        preview: document.getElementById('preview-btn'),
         build: document.getElementById('build-btn'),
         category: document.getElementById('category-btn'),
         inventory: document.getElementById('inventory-btn'),
+        setup: document.getElementById('setup-btn'),
     };
 
-    const currentDateTimeEl = document.getElementById('current-datetime'); // New reference for clock
+    const currentDateTimeEl = document.getElementById('current-datetime');
     const buildTableBody = document.getElementById('build-table-body');
     const categoryGrid = document.getElementById('category-grid');
     const summaryTextbox = document.getElementById('summary-textbox');
-    const themeToggle = document.getElementById('theme-toggle');
+    const themeSelect = document.getElementById('theme-select');
     const exportCatBtn = document.getElementById('export-cat-btn');
     const importCatBtn = document.getElementById('import-cat-btn');
     const categoryFileInput = document.getElementById('category-file-input');
-    const importedCatFilenameEl = document.getElementById('imported-cat-filename'); // New DOM reference
-    const itemCodeFilter = document.getElementById('item-code-filter');
-    const descriptionFilter = document.getElementById('description-filter');
-    const presetDropdown = document.getElementById('preset-dropdown'); // Reference to the new <select> element
+    const importedCatFilenameEl = document.getElementById('imported-cat-filename');
+    const presetDropdown = document.getElementById('preset-dropdown');
     const presetEditorContainer = document.getElementById('preset-editor-container');
+
+    // Global Search Elements
+    const globalSearchInput = document.getElementById('global-search');
+    const globalSearchModal = document.getElementById('global-search-modal');
+    const globalSearchInputModal = document.getElementById('global-search-input');
+    const globalSearchResults = document.getElementById('global-search-results');
+    const globalSearchCloseBtn = document.getElementById('global-search-close-btn');
 
     // Branch Stock Elements
     const branchImportBtn = document.getElementById('branch-import-btn');
     const branchFileInput = document.getElementById('branch-file-input');
-        const branchItemCodeFilter = document.getElementById('branch-item-code-filter');
-        const branchDescriptionFilter = document.getElementById('branch-description-filter');
-        const branchDescriptionFilter2 = document.getElementById('branch-description-filter2'); // New reference
-        const branchStockTableBody = document.getElementById('branch-stock-table-body');
-        const branchFileTextEl = document.getElementById('branch-file-text');
-        const branchFileDateEl = document.getElementById('branch-file-date');
+    const branchItemCodeFilter = document.getElementById('branch-item-code-filter');
+    const branchDescriptionFilter = document.getElementById('branch-description-filter');
+    const branchDescriptionFilter2 = document.getElementById('branch-description-filter2');
+    const branchStockTableBody = document.getElementById('branch-stock-table-body');
+    const branchFileTextEl = document.getElementById('branch-file-text');
+    const branchFileDateEl = document.getElementById('branch-file-date');
     
-        // WHS Stock Elements
-        const whsImportBtn = document.getElementById('whs-import-btn');
-        const whsFileInput = document.getElementById('whs-file-input');
-        const whsItemCodeFilter = document.getElementById('whs-item-code-filter');
-        const whsDescriptionFilter = document.getElementById('whs-description-filter');
-        const whsDescriptionFilter2 = document.getElementById('whs-description-filter2'); // New reference
-        const whsStockTableBody = document.getElementById('whs-stock-table-body');
-        const whsFileTextEl = document.getElementById('whs-file-text');
-        const whsFileDateEl = document.getElementById('whs-file-date');    
-        // Save Build Modal Elements
-        const saveBuildBtn = document.getElementById('save-build-btn');
-        const saveBuildModal = document.getElementById('save-build-modal');
-        const presetNameInput = document.getElementById('preset-name-input');
-        const modalSaveBtn = document.getElementById('modal-save-btn');
-        const modalCancelBtn = document.getElementById('modal-cancel-btn');
+    // WHS Stock Elements
+    const whsImportBtn = document.getElementById('whs-import-btn');
+    const whsFileInput = document.getElementById('whs-file-input');
+    const whsItemCodeFilter = document.getElementById('whs-item-code-filter');
+    const whsDescriptionFilter = document.getElementById('whs-description-filter');
+    const whsDescriptionFilter2 = document.getElementById('whs-description-filter2');
+    const whsStockTableBody = document.getElementById('whs-stock-table-body');
+    const whsFileTextEl = document.getElementById('whs-file-text');
+    const whsFileDateEl = document.getElementById('whs-file-date');
     
-        // --- INITIALIZATION ---
-        function initialize() {
-            // Setup navigation
-            Object.keys(navButtons).forEach(key => {
-                navButtons[key].addEventListener('click', () => showPage(key));
-            });
-    
-            // Setup theme toggle
-            themeToggle.addEventListener('change', toggleTheme);
-    
-            // Setup category actions
-            exportCatBtn.addEventListener('click', exportCategories);
-            importCatBtn.addEventListener('click', () => categoryFileInput.click());
-            categoryFileInput.addEventListener('change', handleCategoryImport);
-    
-            // Setup preset dropdown event listener
-            presetDropdown.addEventListener('change', (e) => {
-                handlePresetClick(e.target.value);
-            });
-    
-            // Setup Branch Stock actions
-            branchImportBtn.addEventListener('click', () => branchFileInput.click());
-                    branchFileInput.addEventListener('change', (e) => handleStockFileUpload(e, 'branch'));
-                    branchItemCodeFilter.addEventListener('input', () => renderBranchStockTable());
-                    branchDescriptionFilter.addEventListener('input', () => renderBranchStockTable());
-                    branchDescriptionFilter2.addEventListener('input', () => renderBranchStockTable()); // New listener
-            
-                    // Setup WHS Stock actions
-                    whsImportBtn.addEventListener('click', () => whsFileInput.click());
-                    whsFileInput.addEventListener('change', (e) => handleStockFileUpload(e, 'whs'));
-                    whsItemCodeFilter.addEventListener('input', () => renderWhsStockTable());
-                    whsDescriptionFilter.addEventListener('input', () => renderWhsStockTable());
-                    whsDescriptionFilter2.addEventListener('input', () => renderWhsStockTable()); // New listener    
-            // Setup Save Build button and modal listeners
-            saveBuildBtn.addEventListener('click', showSaveBuildModal);
-            modalCancelBtn.addEventListener('click', hideSaveBuildModal);
-            modalSaveBtn.addEventListener('click', handleSaveBuild);
-            saveBuildModal.addEventListener('click', (e) => { // Close modal if clicking outside content
-                if (e.target === saveBuildModal) {
-                    hideSaveBuildModal();
-                }
-            });
-    
-            // Start real-time clock
-            setInterval(updateClock, 1000);
-            updateClock(); // Initial call to display time immediately
-    
-            // Load data from localStorage
-            loadFromLocalStorage();
-    
-            // Apply theme
+    // Save Build Modal Elements
+    const saveBuildBtn = document.getElementById('save-build-btn');
+    const saveBuildModal = document.getElementById('save-build-modal');
+    const presetNameInput = document.getElementById('preset-name-input');
+    const modalSaveBtn = document.getElementById('modal-save-btn');
+    const modalCancelBtn = document.getElementById('modal-cancel-btn');
+
+    // --- INITIALIZATION ---
+    function initialize() {
+        // Setup navigation
+        Object.keys(navButtons).forEach(key => {
+            navButtons[key].addEventListener('click', () => showPage(key));
+        });
+
+        // Setup keyboard shortcuts (Ctrl+K for search)
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'k') {
+                e.preventDefault();
+                openGlobalSearch();
+            }
+        });
+
+        // Setup theme selector
+        themeSelect.addEventListener('change', (e) => {
+            currentTheme = e.target.value;
             applyTheme();
-    
-            // Render initial state
-            renderBuildTable();
-            renderCategoryPools(); // Renamed from renderCategoryEditors
-            renderPresetSelect(); // Call to the new select renderer
-            updateUI();
-        }
+            saveToLocalStorage();
+        });
+
+        // Setup global search input (nav bar)
+        globalSearchInput.addEventListener('click', openGlobalSearch);
+
+        // Setup global search modal
+        globalSearchCloseBtn.addEventListener('click', closeGlobalSearch);
+        globalSearchInputModal.addEventListener('input', handleGlobalSearch);
+        globalSearchModal.addEventListener('click', (e) => {
+            if (e.target === globalSearchModal) {
+                closeGlobalSearch();
+            }
+        });
+        globalSearchModal.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeGlobalSearch();
+            }
+        });
+
+        // Setup category actions
+        exportCatBtn.addEventListener('click', exportCategories);
+        importCatBtn.addEventListener('click', () => categoryFileInput.click());
+        categoryFileInput.addEventListener('change', handleCategoryImport);
+
+        // Setup preset dropdown event listener
+        presetDropdown.addEventListener('change', (e) => {
+            handlePresetClick(e.target.value);
+        });
+
+        // Setup Branch Stock actions
+        branchImportBtn.addEventListener('click', () => branchFileInput.click());
+        branchFileInput.addEventListener('change', (e) => handleStockFileUpload(e, 'branch'));
+        branchItemCodeFilter.addEventListener('input', () => renderBranchStockTable());
+        branchDescriptionFilter.addEventListener('input', () => renderBranchStockTable());
+        branchDescriptionFilter2.addEventListener('input', () => renderBranchStockTable());
+
+        // Setup WHS Stock actions
+        whsImportBtn.addEventListener('click', () => whsFileInput.click());
+        whsFileInput.addEventListener('change', (e) => handleStockFileUpload(e, 'whs'));
+        whsItemCodeFilter.addEventListener('input', () => renderWhsStockTable());
+        whsDescriptionFilter.addEventListener('input', () => renderWhsStockTable());
+        whsDescriptionFilter2.addEventListener('input', () => renderWhsStockTable());
+
+        // Setup Save Build button and modal listeners
+        saveBuildBtn.addEventListener('click', showSaveBuildModal);
+        modalCancelBtn.addEventListener('click', hideSaveBuildModal);
+        modalSaveBtn.addEventListener('click', handleSaveBuild);
+        saveBuildModal.addEventListener('click', (e) => {
+            if (e.target === saveBuildModal) {
+                hideSaveBuildModal();
+            }
+        });
+
+        // Setup Bundle toggle listener
+        const bundleToggle = document.getElementById('bundle-toggle');
+        bundleToggle.addEventListener('change', (e) => {
+            isBundleMode = !e.target.checked;
+            renderPreviewTable();
+        });
+
+        // Start real-time clock
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Load data from localStorage
+        loadFromLocalStorage();
+
+        // Apply theme
+        applyTheme();
+
+        // Render initial state
+        renderBuildTable();
+        renderCategoryPools();
+        renderPresetSelect();
+        renderCategoryPresetEditors();
+        updateUI();
+        
+        // Global click handler to close all dropdowns when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.custom-dropdown')) {
+                document.querySelectorAll('.dropdown-options').forEach(el => {
+                    el.style.display = 'none';
+                });
+            }
+        });
+    }
 
     // --- THEME ---
     function applyTheme() {
         document.body.setAttribute('data-theme', currentTheme);
-        themeToggle.checked = currentTheme === 'dark';
+        themeSelect.value = currentTheme;
     }
 
-    function toggleTheme() {
-        currentTheme = themeToggle.checked ? 'dark' : 'light';
-        applyTheme();
-        saveToLocalStorage();
+    // --- GLOBAL SEARCH ---
+    function openGlobalSearch() {
+        globalSearchModal.classList.add('active');
+        globalSearchInputModal.value = '';
+        globalSearchResults.innerHTML = '';
+        setTimeout(() => globalSearchInputModal.focus(), 100);
+    }
+
+    function closeGlobalSearch() {
+        globalSearchModal.classList.remove('active');
+    }
+
+    let searchTimeout;
+
+    function handleGlobalSearch(e) {
+        clearTimeout(searchTimeout);
+        const query = e.target.value.trim().toUpperCase();
+
+        searchTimeout = setTimeout(() => {
+            if (!query) {
+                globalSearchResults.innerHTML = '';
+                return;
+            }
+
+            const results = [];
+            Object.keys(allItems).forEach(code => {
+                const item = allItems[code];
+                const description = (item.description || '').toUpperCase();
+                const codeUpper = code.toUpperCase();
+
+                if (codeUpper.includes(query) || description.includes(query)) {
+                    results.push({ code, description: item.description });
+                }
+            });
+
+            if (results.length === 0) {
+                globalSearchResults.innerHTML = '<div class="global-search-result-item">No matching items found</div>';
+                return;
+            }
+
+            globalSearchResults.innerHTML = results.slice(0, 50).map(item => `
+                <div class="global-search-result-item" data-code="${item.code}">
+                    <span class="result-item-code">${item.code}</span>
+                    <div class="result-item-desc">${item.description}</div>
+                </div>
+            `).join('');
+
+            globalSearchResults.querySelectorAll('.global-search-result-item').forEach(el => {
+                el.addEventListener('click', () => {
+                    const code = el.dataset.code;
+                    navigator.clipboard.writeText(code).then(() => {
+                        el.style.backgroundColor = 'var(--primary-color)';
+                        el.style.color = 'white';
+                        setTimeout(() => {
+                            closeGlobalSearch();
+                        }, 300);
+                    });
+                });
+            });
+        }, 150);
     }
 
     // --- REAL-TIME CLOCK ---
     function updateClock() {
         const now = new Date();
-        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
         currentDateTimeEl.textContent = now.toLocaleDateString(undefined, options);
     }
 
     // --- PAGE NAVIGATION ---
     function showPage(pageKey) {
-        console.log(`[showPage] Attempting to show: ${pageKey}`);
+        // Close any open dropdowns
+        document.querySelectorAll('.dropdown-options').forEach(el => {
+            el.style.display = 'none';
+        });
+        
         // Hide all pages and deactivate all buttons
         Object.values(pages).forEach(page => {
             if (page.classList.contains('active')) {
                 page.classList.remove('active');
-                console.log(`[showPage] Removed active from: ${page.id}`);
             }
         });
         Object.values(navButtons).forEach(btn => btn.classList.remove('active'));
@@ -179,16 +296,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetPage = pages[pageKey];
         if (targetPage) {
             targetPage.classList.add('active');
-            console.log(`[showPage] Added active to: ${targetPage.id}`);
-        } else {
-            console.warn(`[showPage] Target page not found for key: ${pageKey}`);
         }
         
         const targetButton = navButtons[pageKey];
         if (targetButton) {
             targetButton.classList.add('active');
-        } else {
-            console.warn(`[showPage] Target button not found for key: ${pageKey}`);
         }
     }
 
@@ -200,70 +312,49 @@ document.addEventListener('DOMContentLoaded', () => {
         const reader = new FileReader();
         reader.onload = (e) => {
             const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array', cellDates: true }); // Re-added cellDates: true
+            const workbook = XLSX.read(data, { type: 'array', cellDates: true });
 
-            console.log(`[handleStockFileUpload] Workbook for source ${source}:`, workbook);
             if (!workbook) {
                 alert(`Error: Could not read the Excel file for ${source.toUpperCase()} stock. It might be corrupted or an unsupported format.`);
                 return;
             }
 
             const firstSheetName = workbook.SheetNames[0];
-            console.log(`[handleStockFileUpload] First Sheet Name for source ${source}:`, firstSheetName);
             if (!firstSheetName) {
                 alert(`Error: The Excel file for ${source.toUpperCase()} stock has no readable sheets.`);
                 return;
             }
 
             const worksheet = workbook.Sheets[firstSheetName];
-            console.log(`[handleStockFileUpload] Worksheet for source ${source}:`, worksheet);
-            if (!worksheet || Object.keys(worksheet).length === 0) { // Also check if worksheet is empty
+            if (!worksheet || Object.keys(worksheet).length === 0) {
                 alert(`Error: The Excel file for ${source.toUpperCase()} stock might be corrupted, empty, or in an unsupported .xls format that cannot be parsed. Please try a different .xls file, or re-save your file as .xlsx.`);
-                return; // Stop processing if no valid worksheet is found
+                return;
             }
 
-
-            // Extract TEXT from A1 (and B1, if merged, will be in A1)
+            // Extract TEXT from A1
             const textCell = worksheet['A1'];
             const fileText = textCell ? textCell.v : '';
 
-            // Extract DATE from A4 (and B4, if merged, will be in A4)
+            // Extract DATE from A4
             const dateCell = worksheet['A4'];
-            // Check for date type to ensure correct formatting
             const fileDate = dateCell ? (dateCell.t === 'd' ? new Date(dateCell.v).toLocaleDateString() : dateCell.v) : '';
 
-            // Removed update to global importDate
-
-
-            // sheet_to_json with header:1 and range:8 means data starts from Excel row 9 (0-indexed range)
-            // Header: 1 indicates the first row of the selected range (i.e., row 9) is considered a header row
-            // so actual data will be from row 10.
+            // sheet_to_json with header:1 and range:8 means data starts from Excel row 9
             const sheetData = XLSX.utils.sheet_to_json(worksheet, { header: 1, range: 8 });
-
-            console.log(`[handleStockFileUpload] Raw sheetData for source ${source}:`, sheetData);
 
             const newStockData = {};
             sheetData.forEach(row => {
-                // Assuming Excel structure:
-                // A9: Item Code
-                // B9:D9: Description (will be row[1] in sheetData if B9 is the first cell of merged)
-                // E9: QTY
-                const itemCode = row[0]; // Column A
-                // If B9:D9 is merged, row[1] will correctly contain the description.
-                // If B9 is not merged and D9 is empty, row[1] is still B9, and row[2],row[3] might be undefined.
-                // The prompt says B9:D9 is description, so row[1] should contain the main text.
+                const itemCode = row[0];
                 const description = row[1];
-                const qty = row[4]; // Column E
+                const qty = row[4];
 
-                if (itemCode) { // Only add if itemCode is present
+                if (itemCode) {
                     newStockData[itemCode] = {
                         description: description || '',
                         qty: qty || 0,
                     };
                 }
             });
-            
-            console.log(`[handleStockFileUpload] newStockData for source ${source}:`, newStockData);
             
             if (source === 'branch') {
                 branchStockData = newStockData;
@@ -273,7 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 whsFileInfo = { text: fileText, date: fileDate };
             }
 
-            updateAllItems(); // Update the merged allItems list
+            updateAllItems();
             saveToLocalStorage();
             updateUI();
         };
@@ -281,11 +372,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateAllItems() {
-        allItems = { ...branchStockData, ...whsStockData }; // Merge both, WHS will overwrite if item codes are duplicated
+        allItems = { ...branchStockData, ...whsStockData };
     }
 
     function exportCategories() {
-        const dataStr = JSON.stringify({ categories, presets }, null, 2); // Export both categories and presets
+        const dataStr = JSON.stringify({ categories, presets }, null, 2);
         const dataBlob = new Blob([dataStr], {type: "application/json"});
         const url = URL.createObjectURL(dataBlob);
         const link = document.createElement('a');
@@ -298,7 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const time = String(now.getHours()).padStart(2, '0') + '-' + 
                      String(now.getMinutes()).padStart(2, '0') + '-' + 
                      String(now.getSeconds()).padStart(2, '0');
-        link.download = `config_${date}_${time}.json`; // Dynamic filename
+        link.download = `config_${date}_${time}.json`;
         
         document.body.appendChild(link);
         link.click();
@@ -309,7 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleCategoryImport(event) {
         const file = event.target.files[0];
         if (!file) {
-            importedCatFilenameEl.textContent = ''; // Clear on no file selected
+            importedCatFilenameEl.textContent = '';
             return;
         }
 
@@ -318,7 +409,6 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const importedData = JSON.parse(e.target.result);
                 
-                // Basic validation: check if it's an object and contains expected keys
                 if (importedData && typeof importedData === 'object' &&
                     importedData.categories && typeof importedData.categories === 'object' &&
                     importedData.presets && typeof importedData.presets === 'object') {
@@ -326,7 +416,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     categories = importedData.categories;
                     presets = importedData.presets;
                     
-                    // Re-initialize categories and presets to ensure all component keys exist
                     COMPONENTS.forEach(c => {
                         if (!categories[c]) {
                             categories[c] = [];
@@ -347,7 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     saveToLocalStorage();
                     updateUI();
-                    importedCatFilenameEl.textContent = `Imported: ${file.name}`; // Display filename
+                    importedCatFilenameEl.textContent = `Imported: ${file.name}`;
                     alert('Configuration imported successfully!');
                 } else {
                     alert('Invalid configuration file format. Expected an object with "categories" and "presets" properties.');
@@ -363,7 +452,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function saveToLocalStorage() {
-        localStorage.setItem('pcBuilderData', JSON.stringify({ allItems, branchStockData, whsStockData, branchFileInfo, whsFileInfo, categories, presets, buildSelections, currentTheme, activePreset }));
+        localStorage.setItem('pcBuilderData', JSON.stringify({ 
+            allItems, branchStockData, whsStockData, branchFileInfo, whsFileInfo, 
+            categories, presets, buildSelections, setupData, currentTheme, activePreset 
+        }));
     }
 
     function loadFromLocalStorage() {
@@ -378,17 +470,18 @@ document.addEventListener('DOMContentLoaded', () => {
             categories = data.categories || {};
             presets = data.presets || {};
             buildSelections = data.buildSelections || {};
-            // Removed importDate from here
+            setupData = data.setupData || {};
+            setupMultiplier = data.setupMultiplier || 1;
             currentTheme = data.currentTheme || 'light';
             activePreset = data.activePreset || 'CUSTOM';
         }
-        // Ensure categories object has all component keys
+        
         COMPONENTS.forEach(c => {
             if (!categories[c]) {
                 categories[c] = [];
             }
         });
-        // Ensure presets object is fully initialized
+        
         Object.keys(PRESET_CONFIG).forEach(presetName => {
             if (presetName !== 'CUSTOM') {
                 if (!presets[presetName]) {
@@ -401,7 +494,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         });
-        updateAllItems(); // Re-merge stock data after loading
+        updateAllItems();
     }
 
     // --- PRESET UI & LOGIC ---
@@ -411,7 +504,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (presetName === 'CUSTOM') {
             buildSelections = {};
         } else {
-            // Deep copy the preset to buildSelections to avoid accidental mutation
             buildSelections = JSON.parse(JSON.stringify(presets[presetName] || {}));
         }
 
@@ -420,17 +512,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderPresetSelect() {
-        presetDropdown.innerHTML = ''; // Clear existing options
+        presetDropdown.innerHTML = '';
 
         const staticPresetNames = Object.keys(PRESET_CONFIG).filter(name => name !== 'CUSTOM');
         const userDefinedPresetNames = Object.keys(presets).filter(name => !PRESET_CONFIG.hasOwnProperty(name));
 
-        // Sort static presets alphabetically (excluding CUSTOM)
         staticPresetNames.sort((a, b) => a.localeCompare(b));
-        // Sort user-defined presets alphabetically
         userDefinedPresetNames.sort((a, b) => a.localeCompare(b));
 
-        // Combine them: CUSTOM, then sorted static, then sorted user-defined
         const allPresetNames = ['CUSTOM', ...staticPresetNames, ...userDefinedPresetNames];
 
         allPresetNames.forEach(presetName => {
@@ -438,11 +527,10 @@ document.addEventListener('DOMContentLoaded', () => {
             option.value = presetName;
             option.textContent = presetName;
 
-            // Determine tooltip content
             if (PRESET_CONFIG.hasOwnProperty(presetName)) {
-                option.title = PRESET_CONFIG[presetName]; // Static preset tooltip
+                option.title = PRESET_CONFIG[presetName];
             } else {
-                option.title = `User-defined preset: ${presetName}`; // Generic tooltip for user-defined
+                option.title = `User-defined preset: ${presetName}`;
             }
             
             if (presetName === activePreset) {
@@ -452,12 +540,242 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- CUSTOM SEARCHABLE DROPDOWN FUNCTIONS ---
+    
+    function renderBuildTable() {
+        buildTableBody.innerHTML = '';
+        COMPONENTS.forEach(component => {
+            const row = document.createElement('tr');
+            
+            const selectedItemCode = buildSelections[component] || '';
+            const selectedItem = selectedItemCode ? allItems[selectedItemCode] : null;
+            const selectedDescription = selectedItem ? selectedItem.description : '';
 
+            row.innerHTML = `
+                <td>${component}</td>
+                <td class="dropdown-container">
+                    <div class="custom-dropdown" data-component="${component}">
+                        <div class="dropdown-selected">
+                            <span class="selected-text">${selectedDescription ? `[${getItemPrefix(selectedItemCode)}] ${selectedDescription}` : '-- Select --'}</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </div>
+                        <div class="dropdown-options" style="display: none;">
+                            <div class="dropdown-search">
+                                <input type="text" class="dropdown-filter" placeholder="Type to filter by code or description..." autocomplete="off">
+                            </div>
+                            <div class="dropdown-items-container">
+                                ${getFilterableOptionsForComponent(component, '')}
+                            </div>
+                        </div>
+                    </div>
+                </td>
+                <td class="item-code-cell ${!branchStockData.hasOwnProperty(selectedItemCode) && whsStockData.hasOwnProperty(selectedItemCode) ? 'whs-item-code' : ''}">
+                    ${selectedItemCode || ''}
+                </td>
+            `;
+            
+            buildTableBody.appendChild(row);
 
+            const itemCodeCell = row.querySelector('.item-code-cell');
+            if (selectedItemCode && itemCodeCell) {
+                setupCopyFunctionality(itemCodeCell, selectedItemCode);
+            }
+
+            // Setup custom dropdown functionality for this row
+            setupCustomDropdown(row, component, selectedItemCode);
+        });
+    }
+
+    function getItemPrefix(itemCode) {
+        if (branchStockData.hasOwnProperty(itemCode)) return 'SMF';
+        if (whsStockData.hasOwnProperty(itemCode)) return 'WHS';
+        return 'N/A';
+    }
+
+    function getFilterableOptionsForComponent(component, filterText = '') {
+        const itemCodes = categories[component] || [];
+        const filterUpper = filterText.toUpperCase();
+        
+        const filteredCodes = itemCodes
+            .map(code => {
+                let item = null;
+                let prefix = '';
+                
+                const inBranch = branchStockData.hasOwnProperty(code);
+                const inWHS = whsStockData.hasOwnProperty(code);
+                
+                if (inBranch) {
+                    item = branchStockData[code];
+                    prefix = '[SMF] ';
+                } else if (inWHS) {
+                    item = whsStockData[code];
+                    prefix = '[WHS] ';
+                } else {
+                    item = allItems[code];
+                    if (!item) return null;
+                    prefix = '[N/A] ';
+                }
+                
+                if (item) {
+                    const description = item.description || '';
+                    const displayText = `${prefix}${description}`;
+                    
+                    // Apply filter if filterText is provided - search in both code and description
+                    if (filterUpper) {
+                        const codeMatch = code.toUpperCase().includes(filterUpper);
+                        const descMatch = description.toUpperCase().includes(filterUpper);
+                        const displayMatch = displayText.toUpperCase().includes(filterUpper);
+                        
+                        if (!codeMatch && !descMatch && !displayMatch) {
+                            return null;
+                        }
+                    }
+                    
+                    return {
+                        code,
+                        displayText,
+                        description: item.description
+                    };
+                }
+                return null;
+            })
+            .filter(item => item !== null)
+            .sort((a, b) => a.displayText.localeCompare(b.displayText));
+        
+        if (filteredCodes.length === 0) {
+            return '<div class="dropdown-item" data-value="" data-display="--SELECT--">--SELECT--</div><div class="dropdown-no-results">No matching items found</div>';
+        }
+        
+        return '<div class="dropdown-item" data-value="" data-display="--SELECT--">--SELECT--</div>' + filteredCodes.map(item => 
+            `<div class="dropdown-item" data-value="${item.code}" data-display="${item.displayText.replace(/"/g, '&quot;')}">
+                ${item.displayText}
+            </div>`
+        ).join('');
+    }
+
+    function setupCustomDropdown(row, component, currentSelection) {
+        const dropdown = row.querySelector('.custom-dropdown');
+        const selectedDiv = dropdown.querySelector('.dropdown-selected');
+        const optionsDiv = dropdown.querySelector('.dropdown-options');
+        const filterInput = dropdown.querySelector('.dropdown-filter');
+        const itemsContainer = dropdown.querySelector('.dropdown-items-container');
+        const selectedTextSpan = dropdown.querySelector('.selected-text');
+        
+        // Toggle dropdown open/close
+        selectedDiv.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = optionsDiv.style.display === 'block';
+            
+            // Close all other dropdowns first
+            document.querySelectorAll('.dropdown-options').forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // Toggle current one
+            optionsDiv.style.display = isOpen ? 'none' : 'block';
+            
+            if (!isOpen) {
+                filterInput.focus();
+                filterInput.value = '';
+                // Reset items to show all
+                itemsContainer.innerHTML = getFilterableOptionsForComponent(component, '');
+                // Re-attach click events to new option items
+                attachOptionClickEvents(dropdown, component, selectedTextSpan);
+            }
+        });
+        
+        // Filter functionality
+        filterInput.addEventListener('input', (e) => {
+            const filterText = e.target.value;
+            itemsContainer.innerHTML = getFilterableOptionsForComponent(component, filterText);
+            attachOptionClickEvents(dropdown, component, selectedTextSpan);
+        });
+        
+        // Prevent click on search from closing dropdown
+        filterInput.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+        
+        // Initial attachment of click events to options
+        attachOptionClickEvents(dropdown, component, selectedTextSpan);
+    }
+
+    function attachOptionClickEvents(dropdown, component, selectedTextSpan) {
+        const items = dropdown.querySelectorAll('.dropdown-item');
+        items.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                
+                const selectedValue = item.dataset.value;
+                const selectedDisplay = item.dataset.display;
+                
+                // Update selected text
+                selectedTextSpan.textContent = selectedDisplay;
+                
+                // Update build selection
+                buildSelections[component] = selectedValue;
+                
+                // Update the item code cell
+                const row = dropdown.closest('tr');
+                const itemCodeCell = row.querySelector('.item-code-cell');
+                itemCodeCell.textContent = selectedValue;
+                
+                // Update WHS styling
+                const inBranch = branchStockData.hasOwnProperty(selectedValue);
+                const inWHS = whsStockData.hasOwnProperty(selectedValue);
+                if (!inBranch && inWHS) {
+                    itemCodeCell.classList.add('whs-item-code');
+                } else {
+                    itemCodeCell.classList.remove('whs-item-code');
+                }
+                
+                // Re-attach click-to-copy functionality
+                setupCopyFunctionality(itemCodeCell, selectedValue);
+                
+                // Close dropdown
+                dropdown.querySelector('.dropdown-options').style.display = 'none';
+                
+                // Update summary, setup table and save
+                updateBuildSummary();
+                renderSetupTable();
+                saveToLocalStorage();
+            });
+        });
+    }
+
+    function setupCopyFunctionality(cell, text) {
+        // Remove old listener by cloning and replacing
+        const newCell = cell.cloneNode(true);
+        cell.parentNode.replaceChild(newCell, cell);
+        
+        newCell.style.cursor = 'pointer';
+        const originalText = newCell.textContent;
+        
+        newCell.addEventListener('click', () => {
+            navigator.clipboard.writeText(text).then(() => {
+                newCell.textContent = 'Copied!';
+                setTimeout(() => {
+                    newCell.textContent = originalText;
+                }, 1500);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                newCell.textContent = 'Error!';
+                setTimeout(() => {
+                    newCell.textContent = originalText;
+                }, 1500);
+            });
+        });
+    }
+
+    // --- END CUSTOM DROPDOWN FUNCTIONS ---
 
     function renderCategoryPresetEditors() {
-        presetEditorContainer.innerHTML = '<h2>Manage Presets</h2>';
-        // Get all preset names, filtering out user-defined ones that might have been deleted but still in PRESET_CONFIG
+        presetEditorContainer.innerHTML = `
+            <div class="preset-header">
+                <h2>Manage Presets</h2>
+            </div>
+        `;
+        
         const allPresetNames = Object.keys(PRESET_CONFIG).concat(
             Object.keys(presets).filter(name => !PRESET_CONFIG.hasOwnProperty(name))
         );
@@ -472,22 +790,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             innerHTML += '<div class="preset-card-header">';
 
-            // Title rendering and editability
             if (isStaticPreset) {
                 innerHTML += `<h3>${presetName}</h3>`;
             } else {
                 innerHTML += `<input type="text" class="preset-title-input" value="${presetName}" data-preset-name="${presetName}" />`;
             }
 
-            // Delete icon for user-defined, non-custom presets
             if (!isStaticPreset && !isCustomPreset) {
                 innerHTML += `<span class="delete-preset-icon" data-preset-name="${presetName}" title="Delete Preset">🗑️</span>`;
             }
-            innerHTML += '</div>'; // Close preset-card-header
+            innerHTML += '</div>';
 
-            // Component inputs
             COMPONENTS.forEach(component => {
-                // Ensure the preset object and component key exist
                 if (!presets[presetName]) {
                     presets[presetName] = {};
                 }
@@ -504,7 +818,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             card.innerHTML = innerHTML;
 
-            // Event listener for editable title
             if (!isStaticPreset && !isCustomPreset) {
                 const titleInput = card.querySelector('.preset-title-input');
                 titleInput.addEventListener('change', (e) => {
@@ -513,18 +826,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (!newName) {
                         alert('Preset name cannot be empty.');
-                        e.target.value = oldName; // Revert
+                        e.target.value = oldName;
                         return;
                     }
-                    if (newName === oldName) return; // No change
+                    if (newName === oldName) return;
 
                     if (presets.hasOwnProperty(newName) || PRESET_CONFIG.hasOwnProperty(newName)) {
                         alert(`Preset with name "${newName}" already exists or is reserved.`);
-                        e.target.value = oldName; // Revert
+                        e.target.value = oldName;
                         return;
                     }
                     
-                    // Rename preset
                     presets[newName] = presets[oldName];
                     delete presets[oldName];
                     if (activePreset === oldName) {
@@ -534,7 +846,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateUI();
                 });
 
-                // Event listener for delete icon
                 const deleteIcon = card.querySelector('.delete-preset-icon');
                 if (deleteIcon) {
                     deleteIcon.addEventListener('click', (e) => {
@@ -546,7 +857,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Event listener for component inputs
             card.querySelectorAll('input[type="text"]:not(.preset-title-input)').forEach(input => {
                 input.addEventListener('change', (e) => {
                     const preset = e.target.dataset.presetName;
@@ -559,7 +869,6 @@ document.addEventListener('DOMContentLoaded', () => {
             presetEditorContainer.appendChild(card);
         });
 
-        // Add the "ADD PRESET" card
         const addPresetCard = document.createElement('div');
         addPresetCard.className = 'category-card add-preset-card';
         addPresetCard.innerHTML = '<h3>ADD PRESET</h3>';
@@ -569,31 +878,64 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- UI RENDERING ---
     function updateUI() {
-        // Removed importDateEl.textContent = importDate;
-        // The global importDate is no longer stored or displayed in the navbar.
-        // File dates are now displayed per-section.
-
-        // Update file info for Branch Stock
         branchFileTextEl.textContent = branchFileInfo.text;
         branchFileDateEl.textContent = branchFileInfo.date;
-
-        // Update file info for WHS Stock
         whsFileTextEl.textContent = whsFileInfo.text;
         whsFileDateEl.textContent = whsFileInfo.date;
         
-        renderBranchStockTable(); // Call for Branch Stock
-        renderWhsStockTable();    // Call for WHS Stock
+        renderBranchStockTable();
+        renderWhsStockTable();
         renderBuildTable();
-        renderCategoryPools(); // Renamed from renderCategoryEditors
-        renderCategoryPresetEditors(); // Call to render preset editors in Category tab
-        renderPresetSelect(); // Call the new select renderer
+        renderCategoryPools();
+        renderCategoryPresetEditors();
+        renderPresetSelect();
+        renderSetupTable();
+        renderPreviewTable();
         updateBuildSummary();
+    }
+    
+    function renderBranchStockTable() {
+        const codeFilter = branchItemCodeFilter.value.toUpperCase();
+        const descFilter1 = branchDescriptionFilter.value.toUpperCase();
+        const descFilter2 = branchDescriptionFilter2.value.toUpperCase();
+
+        branchStockTableBody.innerHTML = '';
+        Object.entries(branchStockData)
+            .filter(([code, item]) => {
+                const itemCode = code.toUpperCase();
+                const description = (item.description || '').toUpperCase();
+                
+                const matchesCode = itemCode.includes(codeFilter);
+                const matchesDesc1 = description.includes(descFilter1);
+                const matchesDesc2 = description.includes(descFilter2);
+
+                return matchesCode && matchesDesc1 && matchesDesc2;
+            })
+            .forEach(([code, item]) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="item-code-cell">${code}</td>
+                    <td class="description-cell"><div>${item.description}</div></td>
+                    <td class="qty-cell"><div>${item.qty}</div></td>
+                `;
+                branchStockTableBody.appendChild(row);
+
+                const itemCodeCell = row.querySelector('.item-code-cell');
+                if (itemCodeCell) {
+                    setupCopyFunctionality(itemCodeCell, code);
+                }
+
+                const descriptionCell = row.querySelector('.description-cell div');
+                if (descriptionCell) {
+                    setupCopyFunctionality(descriptionCell, item.description);
+                }
+            });
     }
     
     function renderWhsStockTable() {
         const codeFilter = whsItemCodeFilter.value.toUpperCase();
         const descFilter1 = whsDescriptionFilter.value.toUpperCase();
-        const descFilter2 = whsDescriptionFilter2.value.toUpperCase(); // New filter
+        const descFilter2 = whsDescriptionFilter2.value.toUpperCase();
 
         whsStockTableBody.innerHTML = '';
         Object.entries(whsStockData)
@@ -603,9 +945,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const matchesCode = itemCode.includes(codeFilter);
                 const matchesDesc1 = description.includes(descFilter1);
-                const matchesDesc2 = description.includes(descFilter2); // New filter match
+                const matchesDesc2 = description.includes(descFilter2);
 
-                return matchesCode && matchesDesc1 && matchesDesc2; // Must match all three
+                return matchesCode && matchesDesc1 && matchesDesc2;
             })
             .forEach(([code, item]) => {
                 const row = document.createElement('tr');
@@ -616,134 +958,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
                 whsStockTableBody.appendChild(row);
 
-                // Add click-to-copy functionality
                 const itemCodeCell = row.querySelector('.item-code-cell');
                 if (itemCodeCell) {
-                    itemCodeCell.style.cursor = 'pointer';
-                    const originalText = itemCodeCell.textContent;
-                    itemCodeCell.addEventListener('click', () => {
-                        navigator.clipboard.writeText(code).then(() => {
-                            itemCodeCell.textContent = 'Copied!';
-                            setTimeout(() => {
-                                itemCodeCell.textContent = originalText;
-                            }, 1500);
-                        }).catch(err => {
-                            console.error('Failed to copy text: ', err);
-                            itemCodeCell.textContent = 'Error!';
-                            setTimeout(() => {
-                                itemCodeCell.textContent = originalText;
-                            }, 1500);
-                        });
-                    });
+                    setupCopyFunctionality(itemCodeCell, code);
+                }
+
+                const descriptionCell = row.querySelector('.description-cell div');
+                if (descriptionCell) {
+                    setupCopyFunctionality(descriptionCell, item.description);
                 }
             });
-    }
-    
-    function renderBuildTable() {
-        buildTableBody.innerHTML = '';
-        COMPONENTS.forEach(component => {
-            const row = document.createElement('tr');
-            
-            const selectedItemCode = buildSelections[component] || '';
-    
-            row.innerHTML = `
-                <td>${component}</td>
-                <td>
-                    <select data-component="${component}">
-                        <option value="">-- Select --</option>
-                        ${getOptionsForComponent(component)}
-                    </select>
-                </td>
-                <td class="item-code-cell">${selectedItemCode}</td>
-            `;
-            
-            const select = row.querySelector('select');
-            select.value = selectedItemCode;
-            
-            select.addEventListener('change', (e) => {
-                const newSelectedItemCode = e.target.value;
-                buildSelections[component] = newSelectedItemCode;
-                // Re-render the whole table to update the item code and copy icon
-                renderBuildTable();
-                updateBuildSummary();
-                saveToLocalStorage();
-            });
-            
-            const itemCodeCell = row.querySelector('.item-code-cell');
-            if (itemCodeCell && selectedItemCode) { // Only add listener if there's an actual item code
-                // Determine if this item is exclusively WHS stock for styling
-                const inBranch = branchStockData.hasOwnProperty(selectedItemCode);
-                const inWHS = whsStockData.hasOwnProperty(selectedItemCode);
-                if (!inBranch && inWHS) {
-                    itemCodeCell.classList.add('whs-item-code');
-                }
-
-                itemCodeCell.style.cursor = 'pointer'; // Indicate it's clickable
-                let originalText = itemCodeCell.textContent; // Store original text for feedback
-
-                const copyToClipboard = () => {
-                    navigator.clipboard.writeText(selectedItemCode).then(() => {
-                        itemCodeCell.textContent = 'Copied!';
-                        setTimeout(() => {
-                           itemCodeCell.textContent = originalText;
-                        }, 1500);
-                    }).catch(err => {
-                        console.error('Failed to copy text: ', err);
-                        itemCodeCell.textContent = 'Error!';
-                        setTimeout(() => {
-                            itemCodeCell.textContent = originalText;
-                        }, 1500);
-                    });
-                };
-                itemCodeCell.addEventListener('click', copyToClipboard);
-            }
-    
-            buildTableBody.appendChild(row);
-        });
-    }
-
-    function getOptionsForComponent(component) {
-        const itemCodes = categories[component] || [];
-        return itemCodes
-            .map(code => {
-                let item = null;
-                let prefix = '';
-
-                const inBranch = branchStockData.hasOwnProperty(code);
-                const inWHS = whsStockData.hasOwnProperty(code);
-
-                if (inBranch) {
-                    item = branchStockData[code];
-                    prefix = '[SMF] ';
-                } else if (inWHS) {
-                    item = whsStockData[code];
-                    prefix = '[WHS] ';
-                } else {
-                    item = allItems[code];
-                    if (!item) return '';
-                    prefix = '[N/A] ';
-                }
-
-                if (item) {
-                    return `<option value="${code}">${prefix}${item.description}</option>`;
-                }
-                return ''; // Should be caught by the !item check above, but for safety.
-            })
-            .join('');
     }
 
     function updateBuildSummary() {
-        const summary = COMPONENTS.map(component => {
-            const itemCode = buildSelections[component];
-            if (itemCode) {
-                const item = allItems[itemCode];
-                return `${component}: ${item ? item.description : ''}`;
-            }
-            return null;
-        }).filter(Boolean).join('\n');
-    
-        summaryTextbox.value = summary;
-    }
+    const summary = COMPONENTS.map(component => {
+        const itemCode = buildSelections[component];
+        if (itemCode) {
+            const item = allItems[itemCode];
+            // Get the description without the prefix
+            const description = item ? item.description : '';
+            return `${component}: ${description}`;
+        }
+        return null;
+    }).filter(Boolean).join('\n');
+
+    summaryTextbox.value = summary;
+}
 
     function renderCategoryPools() {
         categoryGrid.innerHTML = '';
@@ -754,7 +994,7 @@ document.addEventListener('DOMContentLoaded', () => {
             card.innerHTML = `
                 <h3>${component}</h3>
                 <div class="category-item-add-section">
-                    <input type="text" class="new-item-code-input" placeholder="Add new item code">
+                    <input type="text" class="new-item-code-input" placeholder="Add new item code (one per line)">
                     <button class="nav-btn add-item-btn">Add Item</button>
                     <span class="duplicate-warning" style="display: none; color: red; font-size: 0.8em; margin-left: 10px;">Duplicate!</span>
                 </div>
@@ -778,7 +1018,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const duplicateWarning = card.querySelector('.duplicate-warning');
             const tableBody = card.querySelector('.category-items-table-body');
             
-            // Render existing items
             renderCategoryItems(component, tableBody);
     
             addItemBtn.addEventListener('click', () => {
@@ -798,7 +1037,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
 
-                newItemCodeInput.value = ''; // Clear input
+                newItemCodeInput.value = '';
                 if (duplicatesFound) {
                     duplicateWarning.style.display = 'inline';
                     setTimeout(() => {
@@ -806,19 +1045,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     }, 2000);
                 }
                 
-                if (itemsAdded > 0 || duplicatesFound) { // Only update UI if something changed or duplicates were attempted
+                if (itemsAdded > 0 || duplicatesFound) {
                     saveToLocalStorage();
-                    updateUI(); // Re-render to show changes
+                    updateUI();
                 }
             });
     
-            // Event delegation for delete buttons
             tableBody.addEventListener('click', (e) => {
                 if (e.target.classList.contains('delete-item-btn')) {
                     const itemCodeToDelete = e.target.dataset.itemCode;
                     categories[component] = categories[component].filter(code => code !== itemCodeToDelete);
                     saveToLocalStorage();
-                    updateUI(); // Re-render to show changes
+                    updateUI();
                 }
             });
     
@@ -827,7 +1065,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderCategoryItems(component, tableBody) {
-        tableBody.innerHTML = ''; // Clear existing
+        tableBody.innerHTML = '';
         const itemCodes = categories[component] || [];
         itemCodes.forEach(code => {
             const row = document.createElement('tr');
@@ -839,114 +1077,224 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- SETUP PAGE FUNCTIONS ---
+    function renderSetupTable() {
+        const setupTableBody = document.getElementById('setup-table-body');
+        const multiplierInput = document.getElementById('setup-total-input');
+        let multiplier = parseFloat(multiplierInput.value);
+        if (!multiplier || multiplier < 1) multiplier = 1;
 
+        setupTableBody.innerHTML = '';
 
-        function renderBranchStockTable() {
-            const codeFilter = branchItemCodeFilter.value.toUpperCase();
-            const descFilter1 = branchDescriptionFilter.value.toUpperCase();
-            const descFilter2 = branchDescriptionFilter2.value.toUpperCase(); // New filter
-    
-            branchStockTableBody.innerHTML = '';
-            Object.entries(branchStockData)
-                .filter(([code, item]) => {
-                    const itemCode = code.toUpperCase();
-                    const description = (item.description || '').toUpperCase();
-                    
-                    const matchesCode = itemCode.includes(codeFilter);
-                    const matchesDesc1 = description.includes(descFilter1);
-                    const matchesDesc2 = description.includes(descFilter2); // New filter match
-    
-                    console.log(`[Branch Filter] Item: ${item.description}, F1: "${descFilter1}" (${matchesDesc1}), F2: "${descFilter2}" (${matchesDesc2}), Final: ${matchesCode && matchesDesc1 && matchesDesc2}`);
-    
-                    return matchesCode && matchesDesc1 && matchesDesc2; // Must match all three
-                })
-                            .forEach(([code, item]) => {
-                                const row = document.createElement('tr');
-                                row.innerHTML = `
-                                    <td class="item-code-cell">${code}</td>
-                                    <td class="description-cell"><div>${item.description}</div></td>
-                                    <td class="qty-cell"><div>${item.qty}</div></td>
-                                `;
-                                branchStockTableBody.appendChild(row);
-                
-                                // Add click-to-copy functionality
-                                const itemCodeCell = row.querySelector('.item-code-cell');
-                                if (itemCodeCell) {
-                                    itemCodeCell.style.cursor = 'pointer';
-                                    const originalText = itemCodeCell.textContent;
-                                    itemCodeCell.addEventListener('click', () => {
-                                        navigator.clipboard.writeText(code).then(() => {
-                                            itemCodeCell.textContent = 'Copied!';
-                                            setTimeout(() => {
-                                                itemCodeCell.textContent = originalText;
-                                            }, 1500);
-                                        }).catch(err => {
-                                            console.error('Failed to copy text: ', err);
-                                            itemCodeCell.textContent = 'Error!';
-                                            setTimeout(() => {
-                                                itemCodeCell.textContent = originalText;
-                                            }, 1500);
-                                        });
-                                    });
-                                }
-                            });        }
-    
-        function renderWhsStockTable() {
-            const codeFilter = whsItemCodeFilter.value.toUpperCase();
-            const descFilter1 = whsDescriptionFilter.value.toUpperCase();
-            const descFilter2 = whsDescriptionFilter2.value.toUpperCase(); // New filter
+        let sumCost = 0;
+        let sumUnbundle = 0;
+        let sumBundle = 0;
+        let sumQty = 0;
+        let sumTotal = 0;
 
-            console.log("[renderWhsStockTable] Called.");
-            console.log("[renderWhsStockTable] whsStockTableBody:", whsStockTableBody);
-            console.log("[renderWhsStockTable] whsStockData:", whsStockData);
+        Object.entries(buildSelections).forEach(([component, itemCode]) => {
+            if (!itemCode) return;
 
-            whsStockTableBody.innerHTML = '';
-            Object.entries(whsStockData)
-                .filter(([code, item]) => {
-                    const itemCode = code.toUpperCase();
-                    const description = (item.description || '').toUpperCase();
-                    
-                    const matchesCode = itemCode.includes(codeFilter);
-                    const matchesDesc1 = description.includes(descFilter1);
-                    const matchesDesc2 = description.includes(descFilter2); // New filter match
-    
-                    console.log(`[WHS Filter] Item: ${item.description}, F1: "${descFilter1}" (${matchesDesc1}), F2: "${descFilter2}" (${matchesDesc2}), Final: ${matchesCode && matchesDesc1 && matchesDesc2}`);
-    
-                    return matchesCode && matchesDesc1 && matchesDesc2; // Must match all three
-                })
-                .forEach(([code, item]) => {
-                    console.log(`[renderWhsStockTable] Rendering item code: ${code}`);
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td class="item-code-cell">${code}</td>
-                        <td class="description-cell"><div>${item.description}</div></td>
-                        <td class="qty-cell"><div>${item.qty}</div></td>
-                    `;
-                    whsStockTableBody.appendChild(row);
+            const item = allItems[itemCode];
+            const description = item ? item.description : '';
 
-                    // Add click-to-copy functionality
-                    const itemCodeCell = row.querySelector('.item-code-cell');
-                    console.log(`[renderWhsStockTable] itemCodeCell for ${code}:`, itemCodeCell);
-                    if (itemCodeCell) {
-                        itemCodeCell.style.cursor = 'pointer';
-                        const originalText = itemCodeCell.textContent;
-                        itemCodeCell.addEventListener('click', () => {
-                            navigator.clipboard.writeText(code).then(() => {
-                                itemCodeCell.textContent = 'Copied!';
-                                setTimeout(() => {
-                                    itemCodeCell.textContent = originalText;
-                                }, 1500);
-                            }).catch(err => {
-                                console.error('Failed to copy text: ', err);
-                                itemCodeCell.textContent = 'Error!';
-                                setTimeout(() => {
-                                    itemCodeCell.textContent = originalText;
-                                }, 1500);
-                            });
-                        });
-                    }
-                });
+            // Get existing setup values or defaults
+            const setupItem = setupData[itemCode] || { cost: '', unbundle: '', bundle: '', qty: '' };
+
+            // Calculate values
+            const cost = parseFloat(setupItem.cost) || 0;
+            const unbundle = parseFloat(setupItem.unbundle) || 0;
+            const bundle = parseFloat(setupItem.bundle) || 0;
+            const qty = parseFloat(setupItem.qty) || 0;
+            
+            const total = cost * qty * multiplier;
+            const unbundleTotal = unbundle * qty;
+            const bundleTotal = bundle * qty;
+
+            // Accumulate sums
+            sumCost += cost * qty;
+            sumUnbundle += unbundleTotal;
+            sumBundle += bundleTotal;
+            sumQty += qty;
+            sumTotal += total;
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="item-code-cell">${itemCode}</td>
+                <td class="description-cell"><div>${description}</div></td>
+                <td class="editable" data-item-code="${itemCode}" data-field="cost">
+                    <input type="number" step="0.01" min="0" value="${setupItem.cost}" data-field="cost">
+                </td>
+                <td class="editable" data-item-code="${itemCode}" data-field="unbundle">
+                    <input type="number" step="0.01" min="0" value="${setupItem.unbundle}" data-field="unbundle">
+                </td>
+                <td class="editable" data-item-code="${itemCode}" data-field="bundle">
+                    <input type="number" step="0.01" min="0" value="${setupItem.bundle}" data-field="bundle">
+                </td>
+                <td class="editable" data-item-code="${itemCode}" data-field="qty">
+                    <input type="number" step="1" min="0" value="${setupItem.qty}" data-field="qty">
+                </td>
+                <td>${total.toFixed(2)}</td>
+            `;
+            setupTableBody.appendChild(row);
+
+            const itemCodeCell = row.querySelector('.item-code-cell');
+            if (itemCodeCell) {
+                setupCopyFunctionality(itemCodeCell, itemCode);
+            }
+
+            const descriptionCell = row.querySelector('.description-cell div');
+            if (descriptionCell) {
+                setupCopyFunctionality(descriptionCell, description);
+            }
+        });
+
+        // Add totals row
+        const totalsRow = document.createElement('tr');
+        totalsRow.className = 'setup-totals-row';
+        totalsRow.innerHTML = `
+            <td colspan="2"><strong>TOTAL</strong></td>
+            <td><strong>${sumCost.toFixed(2)}</strong></td>
+            <td><strong>${sumUnbundle.toFixed(2)}</strong></td>
+            <td><strong>${sumBundle.toFixed(2)}</strong></td>
+            <td><strong>${sumQty}</strong></td>
+            <td><strong>${sumTotal.toFixed(2)}</strong></td>
+        `;
+        setupTableBody.appendChild(totalsRow);
+
+        // Attach input change listeners for table cells
+        setupTableBody.querySelectorAll('input').forEach(input => {
+            input.addEventListener('change', (e) => {
+                const td = e.target.closest('td');
+                const itemCode = td.dataset.itemCode;
+                const field = td.dataset.field;
+                const value = e.target.value;
+
+                if (!setupData[itemCode]) {
+                    setupData[itemCode] = { cost: '', unbundle: '', bundle: '', qty: '' };
+                }
+                setupData[itemCode][field] = value;
+                saveToLocalStorage();
+                renderSetupTable();
+                renderPreviewTable();
+            });
+        });
+    }
+
+    // Setup multiplier input listener (once)
+    setTimeout(() => {
+        const multiplierInput = document.getElementById('setup-total-input');
+        multiplierInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                multiplierInput.blur();
+                renderSetupTable();
+            }
+        });
+    }, 100);
+
+    // --- PREVIEW PAGE FUNCTIONS ---
+    function renderPreviewTable() {
+        const previewTableHeader = document.getElementById('preview-table-header');
+        const previewTableBody = document.getElementById('preview-table-body');
+        const previewTotalsRow = document.getElementById('preview-totals-row');
+
+        // Setup header based on bundle mode
+        if (isBundleMode) {
+            previewTableHeader.innerHTML = `
+                <th>CATEGORY</th>
+                <th>DESCRIPTION</th>
+                <th>QTY</th>
+                <th>PRICE</th>
+            `;
+        } else {
+            previewTableHeader.innerHTML = `
+                <th>CATEGORY</th>
+                <th>DESCRIPTION</th>
+                <th>QTY</th>
+            `;
         }
+
+        previewTableBody.innerHTML = '';
+
+        let sumTotal = 0;
+        let sumBundle = 0;
+        let sumQty = 0;
+        let sumPrice = 0;
+
+        // Get multiplier from setup tab
+        const multiplierInput = document.getElementById('setup-total-input');
+        let multiplier = parseFloat(multiplierInput.value);
+        if (!multiplier || multiplier < 1) multiplier = 1;
+
+        Object.entries(buildSelections).forEach(([component, itemCode]) => {
+            if (!itemCode) return;
+
+            const setupItem = setupData[itemCode] || { cost: '', unbundle: '', bundle: '', qty: '' };
+
+            // Skip if no values in setup data
+            if (!setupItem.cost && !setupItem.unbundle && !setupItem.bundle && !setupItem.qty) return;
+
+            const item = allItems[itemCode];
+            let description = item ? item.description : '';
+
+            const cost = parseFloat(setupItem.cost) || 0;
+            const unbundle = parseFloat(setupItem.unbundle) || 0;
+            const bundle = parseFloat(setupItem.bundle) || 0;
+            const qty = parseFloat(setupItem.qty) || 0;
+            
+            const total = cost * qty * multiplier;
+            sumTotal += total;
+            sumBundle += bundle * qty;
+            sumQty += qty;
+
+            let price = '';
+            if (isBundleMode) {
+                // Use unbundle if available, otherwise use total
+                if (unbundle > 0) {
+                    price = `₱${(unbundle * qty).toFixed(2)}`;
+                    sumPrice += unbundle * qty;
+                } else {
+                    price = `₱${total.toFixed(2)}`;
+                    sumPrice += total;
+                }
+            }
+
+            const row = document.createElement('tr');
+            if (isBundleMode) {
+                row.innerHTML = `
+                    <td>${component}</td>
+                    <td>${description}</td>
+                    <td>${qty}</td>
+                    <td>${price}</td>
+                `;
+            } else {
+                row.innerHTML = `
+                    <td>${component}</td>
+                    <td>${description}</td>
+                    <td>${qty}</td>
+                `;
+            }
+            previewTableBody.appendChild(row);
+        });
+
+        // Calculate totals
+        const total4 = sumTotal + sumBundle;
+
+        // Render totals row
+        if (isBundleMode) {
+            previewTotalsRow.innerHTML = `
+                <td colspan="3"><strong>BUILD TOTAL</strong></td>
+                <td><strong>₱${sumPrice.toFixed(2)}</strong></td>
+            `;
+        } else {
+            previewTotalsRow.innerHTML = `
+                <td colspan="2"><strong>BUILD TOTAL</strong></td>
+                <td><strong>₱${total4.toFixed(2)}</strong></td>
+            `;
+        }
+    }
+
     // --- UTILITY FUNCTIONS FOR PRESETS ---
     function generateUniquePresetName() {
         let newName = 'New Preset';
@@ -961,10 +1309,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const newPresetName = generateUniquePresetName();
         presets[newPresetName] = {};
         COMPONENTS.forEach(c => {
-            presets[newPresetName][c] = ''; // Initialize with empty values
+            presets[newPresetName][c] = '';
         });
         saveToLocalStorage();
-        updateUI(); // Re-render to show the new preset card
+        updateUI();
         alert(`New preset "${newPresetName}" added. Remember to save your changes.`);
     }
 
@@ -979,7 +1327,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (activePreset === presetName) {
-            activePreset = 'CUSTOM'; // Switch to custom if deleted preset was active
+            activePreset = 'CUSTOM';
         }
 
         delete presets[presetName];
@@ -990,12 +1338,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- SAVE BUILD MODAL FUNCTIONS ---
     function showSaveBuildModal() {
-        presetNameInput.value = ''; // Clear previous input
-        saveBuildModal.style.display = 'flex'; // Show modal
+        presetNameInput.value = '';
+        saveBuildModal.classList.add('active');
     }
 
     function hideSaveBuildModal() {
-        saveBuildModal.style.display = 'none'; // Hide modal
+        saveBuildModal.classList.remove('active');
     }
 
     function handleSaveBuild() {
@@ -1016,12 +1364,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function saveCurrentBuildAsPreset(title) {
-        // Create a deep copy of current buildSelections
         presets[title] = JSON.parse(JSON.stringify(buildSelections));
-        activePreset = title; // Make the newly saved preset active
-
+        activePreset = title;
         saveToLocalStorage();
-        updateUI(); // Re-render to show the new preset in dropdown and category tab
+        updateUI();
         alert(`Build "${title}" saved as a new preset!`);
     }
 
