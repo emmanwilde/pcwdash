@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- STATE MANAGEMENT ---
     const COMPONENTS = [
-        "Processor", "Motherboard", "RAM", "Storage", "GPU", "CPU Cooler",
+        "Processor", "Motherboard", "RAM", "SSD", "Storage", "GPU", "CPU Cooler",
         "CPU Fan", "Fan", "PSU", "CPU Case", "Chasis Fan", "M&KB", "Monitor", "Windows OS", "Software"
     ];
 
