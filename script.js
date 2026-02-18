@@ -29,8 +29,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let buildSelections = {}; // { "Processor": "itemCode1", ... }
     let setupData = {}; // { "itemCode": { cost: "", unbundle: "", bundle: "", qty: "" }, ... }
     let activePreset = 'CUSTOM';
-    let currentTheme = 'light';
+    let currentTheme = 'dark-amber';
     let isBundleMode = true;
+    let leadsData = [];
 
     // --- DOM ELEMENTS ---
     const pages = {
@@ -39,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
         category: document.getElementById('category-page'),
         inventory: document.getElementById('inventory-page'),
         setup: document.getElementById('setup-page'),
+        inquiries: document.getElementById('inquiries-page'),
     };
 
     const navButtons = {
@@ -47,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
         category: document.getElementById('category-btn'),
         inventory: document.getElementById('inventory-btn'),
         setup: document.getElementById('setup-btn'),
+        inquiries: document.getElementById('inquiries-btn'),
     };
 
     const currentDateTimeEl = document.getElementById('current-datetime');
@@ -54,10 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const categoryGrid = document.getElementById('category-grid');
     const summaryTextbox = document.getElementById('summary-textbox');
     const themeSelect = document.getElementById('theme-select');
-    const exportCatBtn = document.getElementById('export-cat-btn');
-    const importCatBtn = document.getElementById('import-cat-btn');
-    const categoryFileInput = document.getElementById('category-file-input');
-    const importedCatFilenameEl = document.getElementById('imported-cat-filename');
+    const configBtn = document.getElementById('config-btn');
     const presetDropdown = document.getElementById('preset-dropdown');
     const presetEditorContainer = document.getElementById('preset-editor-container');
 
@@ -67,6 +67,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const globalSearchInputModal = document.getElementById('global-search-input');
     const globalSearchResults = document.getElementById('global-search-results');
     const globalSearchCloseBtn = document.getElementById('global-search-close-btn');
+    
+    // Config History Modal Elements
+    const configHistoryModal = document.getElementById('config-history-modal');
+    const configHistoryList = document.getElementById('config-history-list');
+    const configHistoryCloseBtn = document.getElementById('config-history-close-btn');
+    const configSaveBtn = document.getElementById('config-save-btn');
 
     // Branch Stock Elements
     const branchImportBtn = document.getElementById('branch-import-btn');
@@ -97,6 +103,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- INITIALIZATION ---
     function initialize() {
+        console.log('Initializing app...');
+        
         // Setup navigation
         Object.keys(navButtons).forEach(key => {
             navButtons[key].addEventListener('click', () => showPage(key));
@@ -134,10 +142,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Setup category actions
-        exportCatBtn.addEventListener('click', exportCategories);
-        importCatBtn.addEventListener('click', () => categoryFileInput.click());
-        categoryFileInput.addEventListener('change', handleCategoryImport);
+        // Setup config history modal
+        configHistoryCloseBtn.addEventListener('click', closeConfigHistoryModal);
+        if (configSaveBtn) {
+            configSaveBtn.addEventListener('click', () => {
+                exportCategories();
+            });
+        }
+        configHistoryModal.addEventListener('click', (e) => {
+            if (e.target === configHistoryModal) {
+                closeConfigHistoryModal();
+            }
+        });
+
+        // Setup config button
+        configBtn.addEventListener('click', openConfigHistoryModal);
 
         // Setup preset dropdown event listener
         presetDropdown.addEventListener('change', (e) => {
@@ -175,15 +194,103 @@ document.addEventListener('DOMContentLoaded', () => {
             renderPreviewTable();
         });
 
+        // Setup Lead Form
+        const leadForm = document.getElementById('leadForm');
+        if (leadForm) {
+            leadForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!window.leadDb) {
+                    alert('Firebase not initialized');
+                    return;
+                }
+                const { db, collection, addDoc, serverTimestamp, updateDoc, doc } = window.leadDb;
+                const leadData = {
+                    date: document.getElementById('lead-date').value,
+                    name: document.getElementById('lead-name').value,
+                    type: document.getElementById('lead-type').value,
+                    source: document.getElementById('lead-source').value,
+                    contactNumber: document.getElementById('lead-contact').value,
+                    email: document.getElementById('lead-email').value,
+                    inquiry: document.getElementById('lead-inquiry').value,
+                    items: document.getElementById('lead-items').value,
+                    priceRange: document.getElementById('lead-price').value,
+                    status: document.getElementById('lead-status').value,
+                    notes: document.getElementById('lead-notes').value,
+                    updatedAt: serverTimestamp()
+                };
+                try {
+                    if (currentLeadId) {
+                        await updateDoc(doc(db, "leads", currentLeadId), leadData);
+                        alert('Lead Updated!');
+                    } else {
+                        leadData.createdAt = serverTimestamp();
+                        await addDoc(collection(db, "leads"), leadData);
+                        alert('Lead Saved!');
+                    }
+                    closeLeadModal();
+                    loadLeads();
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error saving lead');
+                }
+            });
+        }
+
+        // Setup Lead filters
+        const leadSearch = document.getElementById('lead-search');
+        const leadFilterStatus = document.getElementById('lead-filter-status');
+        if (leadSearch) leadSearch.addEventListener('input', filterLeads);
+        if (leadFilterStatus) leadFilterStatus.addEventListener('change', filterLeads);
+
+        // Setup Lead Modal
+        const addLeadBtn = document.getElementById('add-lead-btn');
+        const leadModal = document.getElementById('lead-modal');
+        const leadCancelBtn = document.getElementById('lead-cancel-btn');
+        const leadDeleteBtn = document.getElementById('lead-delete-btn');
+        
+        if (addLeadBtn) {
+            addLeadBtn.addEventListener('click', () => openLeadModal());
+        }
+        if (leadCancelBtn) {
+            leadCancelBtn.addEventListener('click', closeLeadModal);
+        }
+        if (leadModal) {
+            leadModal.addEventListener('click', (e) => {
+                if (e.target === leadModal) closeLeadModal();
+            });
+        }
+        if (leadDeleteBtn) {
+            leadDeleteBtn.addEventListener('click', deleteLead);
+        }
+
+        // Load leads on init
+        loadLeads();
+
         // Start real-time clock
         setInterval(updateClock, 1000);
         updateClock();
 
-        // Load data from localStorage
-        loadFromLocalStorage();
-
         // Apply theme
         applyTheme();
+
+        // Initialize categories and presets structures
+        COMPONENTS.forEach(c => {
+            if (!categories[c]) {
+                categories[c] = [];
+            }
+        });
+        Object.keys(PRESET_CONFIG).forEach(presetName => {
+            if (presetName !== 'CUSTOM') {
+                if (!presets[presetName]) {
+                    presets[presetName] = {};
+                }
+                COMPONENTS.forEach(c => {
+                    if (!presets[presetName][c]) {
+                        presets[presetName][c] = '';
+                    }
+                });
+            }
+        });
 
         // Render initial state
         renderBuildTable();
@@ -376,46 +483,140 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function exportCategories() {
-        const dataStr = JSON.stringify({ categories, presets }, null, 2);
-        const dataBlob = new Blob([dataStr], {type: "application/json"});
-        const url = URL.createObjectURL(dataBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        
-        const now = new Date();
-        const date = now.getFullYear() + '-' + 
-                     String(now.getMonth() + 1).padStart(2, '0') + '-' + 
-                     String(now.getDate()).padStart(2, '0');
-        const time = String(now.getHours()).padStart(2, '0') + '-' + 
-                     String(now.getMinutes()).padStart(2, '0') + '-' + 
-                     String(now.getSeconds()).padStart(2, '0');
-        link.download = `config_${date}_${time}.json`;
-        
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        if (window.saveConfig) {
+            const configData = JSON.stringify({ categories, presets });
+            window.saveConfig(configData).then(() => {
+                alert('Saved to Firebase!');
+                openConfigHistoryModal();
+            }).catch(err => {
+                console.error('Error saving:', err);
+                alert('Error saving to Firebase');
+            });
+        } else {
+            alert('Firebase not available');
+        }
     }
 
-    function handleCategoryImport(event) {
-        const file = event.target.files[0];
-        if (!file) {
-            importedCatFilenameEl.textContent = '';
+    async function openConfigHistoryModal() {
+        if (!window.loadConfigHistory) {
+            alert('Firebase not available');
             return;
         }
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const importedData = JSON.parse(e.target.result);
-                
-                if (importedData && typeof importedData === 'object' &&
-                    importedData.categories && typeof importedData.categories === 'object' &&
-                    importedData.presets && typeof importedData.presets === 'object') {
-
-                    categories = importedData.categories;
-                    presets = importedData.presets;
+        
+        try {
+            const configs = await window.loadConfigHistory();
+            configHistoryList.innerHTML = '';
+            
+            if (configs.length === 0) {
+                configHistoryList.innerHTML = '<p>No saved configs found.</p>';
+            } else {
+                configs.forEach(config => {
+                    const item = document.createElement('div');
+                    item.className = 'config-history-item';
+                    item.innerHTML = `
+                        <span class="config-date"><strong>${config.date}</strong></span>
+                        <div class="config-actions">
+                            <button class="config-restore-btn">Restore</button>
+                            <button class="config-delete-btn">Delete</button>
+                        </div>
+                    `;
                     
+                    const restoreBtn = item.querySelector('.config-restore-btn');
+                    restoreBtn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        const configData = await window.loadConfigById(config.id);
+                        if (configData) {
+                            try {
+                                const config = JSON.parse(configData);
+                                if (config.categories) {
+                                    categories = config.categories;
+                                }
+                                if (config.presets) {
+                                    presets = config.presets;
+                                }
+                                COMPONENTS.forEach(c => {
+                                    if (!categories[c]) {
+                                        categories[c] = [];
+                                    }
+                                });
+                                Object.keys(PRESET_CONFIG).forEach(presetName => {
+                                    if (presetName !== 'CUSTOM') {
+                                        if (!presets[presetName]) {
+                                            presets[presetName] = {};
+                                        }
+                                        COMPONENTS.forEach(c => {
+                                            if (!presets[presetName][c]) {
+                                                presets[presetName][c] = '';
+                                            }
+                                        });
+                                    }
+                                });
+                                updateUI();
+                                configHistoryModal.classList.remove('active');
+                                alert('Config restored!');
+                            } catch (err) {
+                                alert('Error parsing config');
+                                console.error(err);
+                            }
+                        }
+                    });
+                    
+                    const deleteBtn = item.querySelector('.config-delete-btn');
+                    deleteBtn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        if (confirm('Are you sure you want to delete this config?')) {
+                            try {
+                                const { db, deleteDoc, doc } = window.leadDb;
+                                await deleteDoc(doc(db, "configs", config.id));
+                                openConfigHistoryModal();
+                            } catch (err) {
+                                alert('Error deleting config');
+                                console.error(err);
+                            }
+                        }
+                    });
+                    
+                    configHistoryList.appendChild(item);
+                });
+            }
+            
+            configHistoryModal.classList.add('active');
+        } catch (err) {
+            console.error('Error loading config history:', err);
+            alert('Error loading config history');
+        }
+    }
+
+    function closeConfigHistoryModal() {
+        configHistoryModal.classList.remove('active');
+    }
+
+    function handleCategoryImport() {
+        openConfigHistoryModal();
+    }
+
+    function saveToLocalStorage() {
+        localStorage.setItem('pcBuilderData', JSON.stringify({ 
+            allItems, branchStockData, whsStockData, branchFileInfo, whsFileInfo, 
+            categories, presets, buildSelections, setupData, currentTheme, activePreset 
+        }));
+    }
+
+    async function loadFromFirebase() {
+        console.log('Loading from Firebase...');
+        if (window.loadConfig) {
+            try {
+                const configStr = await window.loadConfig();
+                console.log('Config string from Firebase:', configStr);
+                if (configStr) {
+                    const config = JSON.parse(configStr);
+                    console.log('Parsed config:', config);
+                    if (config.categories) {
+                        categories = config.categories;
+                    }
+                    if (config.presets) {
+                        presets = config.presets;
+                    }
                     COMPONENTS.forEach(c => {
                         if (!categories[c]) {
                             categories[c] = [];
@@ -433,29 +634,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             });
                         }
                     });
-
-                    saveToLocalStorage();
+                    console.log('Config loaded from Firebase, categories:', categories);
                     updateUI();
-                    importedCatFilenameEl.textContent = `Imported: ${file.name}`;
-                    alert('Configuration imported successfully!');
                 } else {
-                    alert('Invalid configuration file format. Expected an object with "categories" and "presets" properties.');
-                    importedCatFilenameEl.textContent = 'Import failed: Invalid format';
+                    console.log('No config found in Firebase');
                 }
-            } catch (error) {
-                alert('Error reading or parsing configuration file.');
-                console.error(error);
-                importedCatFilenameEl.textContent = 'Import failed: Error';
+            } catch (err) {
+                console.error('Error loading config from Firebase:', err);
             }
-        };
-        reader.readAsText(file);
-    }
-
-    function saveToLocalStorage() {
-        localStorage.setItem('pcBuilderData', JSON.stringify({ 
-            allItems, branchStockData, whsStockData, branchFileInfo, whsFileInfo, 
-            categories, presets, buildSelections, setupData, currentTheme, activePreset 
-        }));
+        } else {
+            console.log('window.loadConfig not available');
+        }
     }
 
     function loadFromLocalStorage() {
@@ -472,7 +661,7 @@ document.addEventListener('DOMContentLoaded', () => {
             buildSelections = data.buildSelections || {};
             setupData = data.setupData || {};
             setupMultiplier = data.setupMultiplier || 1;
-            currentTheme = data.currentTheme || 'light';
+            currentTheme = data.currentTheme || 'dark-amber';
             activePreset = data.activePreset || 'CUSTOM';
         }
         
@@ -975,7 +1164,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const itemCode = buildSelections[component];
         if (itemCode) {
             const item = allItems[itemCode];
-            // Get the description without the prefix
             const description = item ? item.description : '';
             return `${component}: ${description}`;
         }
@@ -983,7 +1171,133 @@ document.addEventListener('DOMContentLoaded', () => {
     }).filter(Boolean).join('\n');
 
     summaryTextbox.value = summary;
-}
+    }
+
+    // --- LEADS / INQUIRIES FUNCTIONS ---
+    async function loadLeads() {
+        if (!window.leadDb) return;
+        const { db, collection, getDocs, query, orderBy } = window.leadDb;
+        try {
+            const q = query(collection(db, "leads"), orderBy("createdAt", "desc"));
+            const snapshot = await getDocs(q);
+            leadsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            filterLeads();
+        } catch (error) {
+            console.error('Error loading leads:', error);
+        }
+    }
+
+    function filterLeads() {
+        const search = document.getElementById('lead-search')?.value.toLowerCase() || '';
+        const statusFilter = document.getElementById('lead-filter-status')?.value || '';
+        
+        let filtered = leadsData;
+        if (search) {
+            filtered = filtered.filter(lead => 
+                lead.name?.toLowerCase().includes(search) ||
+                lead.inquiry?.toLowerCase().includes(search) ||
+                lead.items?.toLowerCase().includes(search) ||
+                lead.contactNumber?.toLowerCase().includes(search)
+            );
+        }
+        if (statusFilter) {
+            filtered = filtered.filter(lead => lead.status === statusFilter);
+        }
+        renderLeadsTable(filtered);
+    }
+
+    function renderLeadsTable(leads) {
+        const tbody = document.getElementById('leads-table-body');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        leads.forEach(lead => {
+            const row = document.createElement('tr');
+            row.style.cursor = 'pointer';
+            const statusClass = getStatusClass(lead.status);
+            row.innerHTML = `
+                <td>${lead.date || '-'}</td>
+                <td>${lead.name || '-'}</td>
+                <td>${lead.type || '-'}</td>
+                <td>${lead.source || '-'}</td>
+                <td>${lead.contactNumber || '-'}</td>
+                <td>${lead.inquiry || '-'}</td>
+                <td>${lead.priceRange || '-'}</td>
+                <td><span class="status-badge ${statusClass}">${lead.status || '-'}</span></td>
+                <td>${lead.notes || '-'}</td>
+            `;
+            row.addEventListener('click', () => openLeadModal(lead));
+            tbody.appendChild(row);
+        });
+    }
+
+    function getStatusClass(status) {
+        switch(status) {
+            case 'New Lead': return 'status-new';
+            case 'Contacted': return 'status-contacted';
+            case 'In-Progress': return 'status-progress';
+            case 'Closed-Win': return 'status-win';
+            case 'Closed-Lose': return 'status-lose';
+            default: return '';
+        }
+    }
+
+    let currentLeadId = null;
+
+    function openLeadModal(lead = null) {
+        const modal = document.getElementById('lead-modal');
+        const title = document.getElementById('lead-modal-title');
+        const deleteBtn = document.getElementById('lead-delete-btn');
+        const form = document.getElementById('leadForm');
+        
+        if (lead) {
+            title.textContent = 'Edit Lead';
+            currentLeadId = lead.id;
+            document.getElementById('lead-id').value = lead.id;
+            document.getElementById('lead-date').value = lead.date || '';
+            document.getElementById('lead-name').value = lead.name || '';
+            document.getElementById('lead-type').value = lead.type || '';
+            document.getElementById('lead-source').value = lead.source || '';
+            document.getElementById('lead-contact').value = lead.contactNumber || '';
+            document.getElementById('lead-email').value = lead.email || '';
+            document.getElementById('lead-inquiry').value = lead.inquiry || '';
+            document.getElementById('lead-items').value = lead.items || '';
+            document.getElementById('lead-price').value = lead.priceRange || '';
+            document.getElementById('lead-status').value = lead.status || 'New Lead';
+            document.getElementById('lead-notes').value = lead.notes || '';
+            deleteBtn.style.display = 'block';
+        } else {
+            title.textContent = 'Add New Lead';
+            currentLeadId = null;
+            form.reset();
+            document.getElementById('lead-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('lead-type').value = '';
+            document.getElementById('lead-source').value = '';
+            deleteBtn.style.display = 'none';
+        }
+        
+        modal.classList.add('active');
+    }
+
+    function closeLeadModal() {
+        const modal = document.getElementById('lead-modal');
+        modal.classList.remove('active');
+        currentLeadId = null;
+    }
+
+    async function deleteLead() {
+        if (!currentLeadId || !window.leadDb) return;
+        if (!confirm('Are you sure you want to delete this lead?')) return;
+        
+        const { db, deleteDoc, doc } = window.leadDb;
+        try {
+            await deleteDoc(doc(db, "leads", currentLeadId));
+            closeLeadModal();
+            loadLeads();
+        } catch (error) {
+            console.error('Error deleting lead:', error);
+            alert('Error deleting lead');
+        }
+    }
 
     function renderCategoryPools() {
         categoryGrid.innerHTML = '';
@@ -1372,5 +1686,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- START THE APP ---
-    initialize();
+    try {
+        initialize();
+    } catch(e) {
+        console.error('Error initializing app:', e);
+        alert('Error initializing app: ' + e.message);
+    }
 });

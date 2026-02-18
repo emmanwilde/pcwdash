@@ -1,3 +1,60 @@
+/* Login Styles */
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: var(--bg-color);
+}
+
+.login-box {
+    background: var(--card-bg);
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    text-align: center;
+    width: 300px;
+}
+
+.login-box h2 {
+    margin-bottom: 30px;
+    color: var(--primary-color);
+    border: none;
+}
+
+.login-box input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-size: 1em;
+    box-sizing: border-box;
+}
+
+.login-box input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.login-box button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+}
+
+.login-error {
+    color: #dc3545;
+    font-size: 0.9em;
+    margin-top: 10px;
+}
+
+.logout-btn {
+    margin-right: 10px;
+}
+
 :root {
     --bg-color: #f5f5f7;
     --text-color: #333333;
@@ -273,13 +330,13 @@ nav {
 }
 
 .theme-select {
-    padding: 6px 10px;
+    padding: 8px 16px;
     border: 1px solid var(--btn-border);
     border-radius: 5px;
     background-color: var(--card-bg);
     color: var(--text-color);
     cursor: pointer;
-    font-size: 0.9em;
+    font-size: 1em;
 }
 
 .global-search {
@@ -1164,3 +1221,391 @@ input:checked + .bundle-slider:before {
     position: relative;
 }
 /* ============ END CUSTOM DROPDOWN STYLES ============ */
+
+/* ============ INQUIRIES PAGE ============ */
+.inquiries-table-section {
+    background: var(--card-bg);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.inquiries-table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.inquiries-table-header h2 {
+    margin: 0;
+    border: none;
+    padding: 0;
+}
+
+.inquiries-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.inquiries-filters {
+    display: flex;
+    gap: 10px;
+}
+
+.inquiries-filters input {
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    min-width: 200px;
+}
+
+.inquiries-filters select {
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+#leads-table {
+    width: 100%;
+    min-width: 800px;
+}
+
+#leads-table th,
+#leads-table td {
+    padding: 10px 8px;
+    font-size: 0.85em;
+    white-space: nowrap;
+}
+
+#leads-table tbody tr {
+    cursor: pointer;
+}
+
+#leads-table tbody tr:hover {
+    background-color: var(--row-hover-bg);
+}
+
+#leads-table td:nth-child(9) {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Lead Modal */
+.lead-modal-content {
+    max-width: 700px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.lead-modal-content h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.lead-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    font-weight: 500;
+    font-size: 0.9em;
+    color: var(--text-color);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-size: 1em;
+}
+
+.form-group textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.lead-modal-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+}
+
+.lead-modal-btns {
+    display: flex;
+    gap: 10px;
+    margin-left: auto;
+}
+
+.lead-modal-btns button {
+    min-width: 100px;
+}
+
+.delete-btn {
+    background-color: #dc3545;
+    color: white;
+    border-color: #dc3545;
+}
+
+.delete-btn:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+}
+
+/* Lead Dropdowns */
+.lead-dropdown {
+    position: relative;
+    width: 100%;
+    font-size: 14px;
+}
+
+.lead-dropdown .dropdown-selected {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.lead-dropdown .dropdown-selected:hover {
+    border-color: var(--primary-color);
+}
+
+.lead-dropdown .dropdown-arrow {
+    font-size: 12px;
+    color: var(--text-color);
+    opacity: 0.7;
+}
+
+.lead-dropdown .dropdown-options {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 250px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    margin-top: 4px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.lead-dropdown .dropdown-search {
+    padding: 8px;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    background-color: var(--card-bg);
+}
+
+.lead-dropdown .dropdown-filter {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-size: 13px;
+    box-sizing: border-box;
+}
+
+.lead-dropdown .dropdown-filter:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.lead-dropdown .dropdown-items-container {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.lead-dropdown .dropdown-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.lead-dropdown .dropdown-item:hover {
+    background-color: var(--row-hover-bg);
+}
+
+.lead-dropdown .dropdown-item.selected {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: 500;
+}
+
+.status-new {
+    background-color: #e3f2fd;
+    color: #1565c0;
+}
+
+[data-theme="dark"] .status-new {
+    background-color: #1565c0;
+    color: #e3f2fd;
+}
+
+.status-contacted {
+    background-color: #fff3e0;
+    color: #e65100;
+}
+
+[data-theme="dark"] .status-contacted {
+    background-color: #e65100;
+    color: #fff3e0;
+}
+
+.status-progress {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+[data-theme="dark"] .status-progress {
+    background-color: #2e7d32;
+    color: #e8f5e9;
+}
+
+.status-win {
+    background-color: #e8f5e9;
+    color: #1b5e20;
+}
+
+[data-theme="dark"] .status-win {
+    background-color: #4caf50;
+    color: white;
+}
+
+.status-lose {
+    background-color: #ffebee;
+    color: #c62828;
+}
+
+[data-theme="dark"] .status-lose {
+    background-color: #c62828;
+    color: white;
+}
+
+/* Config History Modal */
+.config-history-list {
+    max-height: 400px;
+    overflow-y: auto;
+    margin: 15px 0;
+}
+
+.config-info {
+    text-align: center;
+    color: #888;
+    font-size: 0.85em;
+    margin-bottom: 15px;
+}
+
+#config-save-btn {
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+.config-history-item {
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    margin-bottom: 8px;
+    transition: background-color 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.config-history-item:hover {
+    background-color: var(--row-hover-bg);
+    border-color: var(--primary-color);
+}
+
+.config-date {
+    flex: 1;
+}
+
+.config-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.config-restore-btn, .config-delete-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+}
+
+.config-restore-btn {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.config-restore-btn:hover {
+    background-color: var(--primary-hover);
+}
+
+.config-delete-btn {
+    background-color: #dc3545;
+    color: white;
+}
+
+.config-delete-btn:hover {
+    background-color: #c82333;
+}

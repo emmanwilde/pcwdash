@@ -7,17 +7,34 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <nav>
-        <div class="nav-left">
-            <button id="preview-btn" class="nav-btn" data-shortcut="1">PREVIEW</button>
-            <button id="build-btn" class="nav-btn active" data-shortcut="2">BUILD</button>
-            <button id="category-btn" class="nav-btn" data-shortcut="3">CATEGORY</button>
-            <button id="inventory-btn" class="nav-btn" data-shortcut="4">INVENTORY</button>
-            <button id="setup-btn" class="nav-btn" data-shortcut="5">SETUP</button>
+    <!-- Login Section -->
+    <div id="loginSection">
+        <div class="login-container">
+            <div class="login-box">
+                <h2>PC Builder Dashboard</h2>
+                <input type="text" id="loginUsername" placeholder="Username">
+                <input type="password" id="loginPassword" placeholder="Password">
+                <button onclick="login()" class="nav-btn">Login</button>
+                <p id="login-error" class="login-error"></p>
+            </div>
         </div>
-        <div class="nav-right">
-            <input type="text" id="global-search" class="global-search" placeholder="Search item code... (Ctrl+K)">
-            <span id="current-datetime"></span>
+    </div>
+
+    <!-- Main App Section -->
+    <div id="appSection" style="display: none;">
+        <nav>
+            <div class="nav-left">
+                <button id="preview-btn" class="nav-btn" data-shortcut="1">PREVIEW</button>
+                <button id="build-btn" class="nav-btn active" data-shortcut="2">BUILD</button>
+                <button id="category-btn" class="nav-btn" data-shortcut="3">CATEGORY</button>
+                <button id="inventory-btn" class="nav-btn" data-shortcut="4">INVENTORY</button>
+                <button id="setup-btn" class="nav-btn" data-shortcut="5">SETUP</button>
+                <button id="inquiries-btn" class="nav-btn" data-shortcut="6">INQUIRIES</button>
+            </div>
+            <div class="nav-right">
+                <input type="text" id="global-search" class="global-search" placeholder="Search item code... (Ctrl+K)">
+                <span id="current-datetime"></span>
+                <button onclick="logout()" class="nav-btn logout-btn">Logout</button>
                 <div class="theme-switcher">
                     <select id="theme-select" class="theme-select">
                         <option value="light">Light</option>
@@ -32,8 +49,9 @@
                         <option value="green">Green</option>
                         <option value="teal">Teal</option>
                     </select>
-        </div>
-    </nav>
+                </div>
+            </div>
+        </nav>
 
     <main>
         <div id="preview-page" class="page">
@@ -97,10 +115,7 @@
             <div class="category-header">
                 <h2>Manage Categories</h2>
                 <div class="category-actions">
-                    <button id="export-cat-btn" class="nav-btn">Export Categories</button>
-                    <button id="import-cat-btn" class="nav-btn">Import Categories</button>
-                    <input type="file" id="category-file-input" accept=".json" style="display: none;">
-                    <span id="imported-cat-filename" style="font-size: 0.8em; color: #888; margin-top: 5px;"></span>
+                    <button id="config-btn" class="nav-btn">Configuration</button>
                 </div>
             </div>
             <div id="category-grid">
@@ -193,10 +208,223 @@
                 </table>
             </div>
         </div>
+
+        <div id="inquiries-page" class="page">
+            <div class="inquiries-table-section">
+                <div class="inquiries-table-header">
+                    <h2>LEADS</h2>
+                    <div class="inquiries-header-actions">
+                        <div class="inquiries-filters">
+                            <input type="text" id="lead-search" placeholder="Search...">
+                            <select id="lead-filter-status">
+                                <option value="">All Status</option>
+                                <option value="New Lead">New Lead</option>
+                                <option value="Contacted">Contacted</option>
+                                <option value="In-Progress">In-Progress</option>
+                                <option value="Closed-Win">Closed-Win</option>
+                                <option value="Closed-Lose">Closed-Lose</option>
+                            </select>
+                        </div>
+                        <button id="add-lead-btn" class="nav-btn">+ Add New Lead</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table id="leads-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Source</th>
+                                <th>Contact</th>
+                                <th>Inquiry</th>
+                                <th>Price Range</th>
+                                <th>Status</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leads-table-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lead Modal -->
+        <div id="lead-modal" class="modal-overlay">
+            <div class="modal-content lead-modal-content">
+                <h3 id="lead-modal-title">Add New Lead</h3>
+                <form id="leadForm" class="lead-form">
+                    <input type="hidden" id="lead-id">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="lead-date">Date</label>
+                            <input type="date" id="lead-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="lead-name">Customer Name</label>
+                            <input type="text" id="lead-name" placeholder="Customer Name" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="lead-type">Type</label>
+                            <input type="text" id="lead-type" placeholder="e.g. Individual, Company">
+                        </div>
+                        <div class="form-group">
+                            <label for="lead-source">Source</label>
+                            <input type="text" id="lead-source" placeholder="e.g. Facebook, Walk-in, Google">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="lead-contact">Contact Number</label>
+                            <input type="text" id="lead-contact" placeholder="Contact Number">
+                        </div>
+                        <div class="form-group">
+                            <label for="lead-email">Email</label>
+                            <input type="email" id="lead-email" placeholder="Email">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="lead-inquiry">Inquiry</label>
+                            <input type="text" id="lead-inquiry" placeholder="e.g. Gaming PC Build">
+                        </div>
+                        <div class="form-group">
+                            <label for="lead-items">Items / Components</label>
+                            <input type="text" id="lead-items" placeholder="Items / Components">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="lead-price">Price Range</label>
+                            <input type="text" id="lead-price" placeholder="e.g. 40k-50k">
+                        </div>
+                        <div class="form-group">
+                            <label for="lead-status">Status</label>
+                            <select id="lead-status">
+                                <option value="New Lead">New Lead</option>
+                                <option value="Contacted">Contacted</option>
+                                <option value="In-Progress">In-Progress</option>
+                                <option value="Closed-Win">Closed-Win</option>
+                                <option value="Closed-Lose">Closed-Lose</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="lead-notes">Notes / Remarks</label>
+                        <textarea id="lead-notes" placeholder="Notes / Remarks"></textarea>
+                    </div>
+                    <div class="lead-modal-actions">
+                        <button type="button" id="lead-delete-btn" class="nav-btn delete-btn" style="display: none;">Delete</button>
+                        <div class="lead-modal-btns">
+                            <button type="button" id="lead-cancel-btn" class="nav-btn">Cancel</button>
+                            <button type="submit" class="nav-btn">Save Lead</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
     </main>
+    </div>
 
     <!-- XLSX Library for Excel file reading -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, serverTimestamp, getDocs, deleteDoc, doc, updateDoc, query, orderBy, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC19ITf9zUsObA8_5tDiF0iPC1v8ArK9og",
+            authDomain: "myinquiries-f6a23.firebaseapp.com",
+            projectId: "myinquiries-f6a23",
+            storageBucket: "myinquiries-f6a23.firebasestorage.app",
+            messagingSenderId: "598164481726",
+            appId: "1:598164481726:web:c738d1a2ab7e1ff3fde0ef"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const FAKE_EMAIL_DOMAIN = "@fake.com";
+
+        window.login = async function() {
+            const username = document.getElementById("loginUsername").value.trim();
+            const password = document.getElementById("loginPassword").value;
+            const errorMsg = document.getElementById("login-error");
+
+            if (!username || !password) {
+                errorMsg.textContent = "Please enter username and password";
+                return;
+            }
+
+            const email = username + FAKE_EMAIL_DOMAIN;
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                errorMsg.textContent = "";
+            } catch (error) {
+                errorMsg.textContent = "Wrong username or password";
+            }
+        };
+
+        window.logout = function() {
+            signOut(auth);
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById("loginSection").style.display = "none";
+                document.getElementById("appSection").style.display = "block";
+            } else {
+                document.getElementById("loginSection").style.display = "block";
+                document.getElementById("appSection").style.display = "none";
+            }
+        });
+
+        window.leadDb = { db, collection, addDoc, serverTimestamp, getDocs, deleteDoc, doc, updateDoc, query, orderBy };
+
+        window.firebaseDb = db;
+
+        window.saveConfig = async function(configJSON) {
+            const timestamp = Date.now();
+            await setDoc(doc(db, "configs", "userConfig_" + timestamp), { 
+                data: configJSON,
+                timestamp: timestamp,
+                date: new Date().toLocaleString()
+            });
+        };
+
+        window.loadConfigHistory = async function() {
+            const { getDocs, query, collection, orderBy } = window.leadDb;
+            const q = query(collection(db, "configs"), orderBy("timestamp", "desc"));
+            const snapshot = await getDocs(q);
+            const configs = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                if (doc.id.startsWith("userConfig_")) {
+                    configs.push({
+                        id: doc.id,
+                        timestamp: data.timestamp,
+                        date: data.date
+                    });
+                }
+            });
+            return configs;
+        };
+
+        window.loadConfigById = async function(configId) {
+            const docSnap = await getDoc(doc(db, "configs", configId));
+            if (docSnap.exists()) {
+                return docSnap.data().data;
+            }
+            return null;
+        };
+    </script>
     <!-- Main application script -->
     <script src="script.js"></script>
 
@@ -220,6 +448,19 @@
             <div id="global-search-results" class="global-search-results"></div>
             <div class="modal-actions">
                 <button id="global-search-close-btn" class="nav-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Config History Modal -->
+    <div id="config-history-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>MANAGE CONFIGURATIONS</h3>
+            <p class="config-info">Configurations saved in Firebase</p>
+            <button id="config-save-btn" class="nav-btn">SAVE CURRENT CONFIG</button>
+            <div class="config-history-list" id="config-history-list"></div>
+            <div class="modal-actions">
+                <button id="config-history-close-btn" class="nav-btn">Cancel</button>
             </div>
         </div>
     </div>
