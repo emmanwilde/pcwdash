@@ -41,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
         inventory: document.getElementById('inventory-page'),
         setup: document.getElementById('setup-page'),
         inquiries: document.getElementById('inquiries-page'),
+        gpuList: document.getElementById('gpu-list-page'),
     };
 
     const navButtons = {
@@ -50,6 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
         inventory: document.getElementById('inventory-btn'),
         setup: document.getElementById('setup-btn'),
         inquiries: document.getElementById('inquiries-btn'),
+        gpuList: document.getElementById('gpu-list-btn'),
     };
 
     const currentDateTimeEl = document.getElementById('current-datetime');
@@ -265,6 +267,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Load leads on init
         loadLeads();
+
+        // Setup GPU List button and load data
+        setupGpuTabs();
+        loadGpuData();
 
         // Start real-time clock
         setInterval(updateClock, 1000);
@@ -1297,6 +1303,192 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error deleting lead:', error);
             alert('Error deleting lead');
         }
+    }
+
+    // --- GPU LIST DATA (EMBEDDED) ---
+    let currentGpuCategory = 'rasterization';
+
+    const gpuDataRasterization = [
+        { "graphics_card": "GeForce RTX 5090", "1080p_medium": "100.0% (197.5)", "1080p_ultra": "100.0% (157.6)", "1440p_ultra": "100.0% (143.0)", "4k_ultra": "100.0% (105.8)", "specifications": "GB202, 21760 shaders, 2407MHz, 32GB GDDR7@28Gbps, 1792GB/s, 575W" },
+        { "graphics_card": "GeForce RTX 4090", "1080p_medium": "99.0% (195.6)", "1080p_ultra": "95.2% (150.1)", "1440p_ultra": "88.6% (126.6)", "4k_ultra": "80.3% (85.0)", "specifications": "AD102, 16384 shaders, 2520MHz, 24GB GDDR6X@21Gbps, 1008GB/s, 450W" },
+        { "graphics_card": "GeForce RTX 5080", "1080p_medium": "90.4% (178.5)", "1080p_ultra": "84.9% (133.9)", "1440p_ultra": "78.1% (111.7)", "4k_ultra": "67.2% (71.1)", "specifications": "GB203, 10752 shaders, 2617MHz, 16GB GDDR7@30Gbps, 690GB/s, 360W" },
+        { "graphics_card": "GeForce RTX 4080 Super", "1080p_medium": "89.7% (177.2)", "1080p_ultra": "83.2% (131.1)", "1440p_ultra": "74.0% (105.8)", "4k_ultra": "61.2% (64.8)", "specifications": "AD103, 10240 shaders, 2550MHz, 16GB GDDR6X@23Gbps, 736GB/s, 320W" },
+        { "graphics_card": "GeForce RTX 4080", "1080p_medium": "88.6% (175.0)", "1080p_ultra": "82.0% (129.3)", "1440p_ultra": "72.5% (103.7)", "4k_ultra": "59.4% (62.8)", "specifications": "AD103, 9728 shaders, 2505MHz, 16GB GDDR6X@22.4Gbps, 717GB/s, 320W" },
+        { "graphics_card": "Radeon RX 7900 XTX", "1080p_medium": "88.1% (174.1)", "1080p_ultra": "79.4% (125.1)", "1440p_ultra": "71.8% (102.6)", "4k_ultra": "60.8% (64.3)", "specifications": "Navi 31, 6144 shaders, 2500MHz, 24GB GDDR6@20Gbps, 960GB/s, 355W" },
+        { "graphics_card": "GeForce RTX 5070 Ti", "1080p_medium": "85.7% (169.3)", "1080p_ultra": "78.8% (124.2)", "1440p_ultra": "70.8% (101.2)", "4k_ultra": "58.7% (62.1)", "specifications": "GB203, 8960 shaders, 2452MHz, 16GB GDDR7@28Gbps, 896GB/s, 300W" },
+        { "graphics_card": "Radeon RX 9070 XT", "1080p_medium": "85.6% (169.0)", "1080p_ultra": "76.1% (119.9)", "1440p_ultra": "68.7% (98.3)", "4k_ultra": "57.6% (61.0)", "specifications": "Navi 48, 4096 shaders, 2970MHz, 16GB GDDR6@20Gbps, 640GB/s, 304W" },
+        { "graphics_card": "Radeon RX 7900 XT", "1080p_medium": "82.6% (163.1)", "1080p_ultra": "73.3% (115.5)", "1440p_ultra": "64.4% (92.0)", "4k_ultra": "52.0% (55.0)", "specifications": "Navi 31, 5376 shaders, 2400MHz, 20GB GDDR6@20Gbps, 800GB/s, 315W" },
+        { "graphics_card": "GeForce RTX 4070 Ti Super", "1080p_medium": "81.7% (161.3)", "1080p_ultra": "74.1% (116.9)", "1440p_ultra": "64.3% (92.0)", "4k_ultra": "51.8% (54.8)", "specifications": "AD103, 8448 shaders, 2610MHz, 16GB GDDR6X@21Gbps, 672GB/s, 285W" },
+        { "graphics_card": "Radeon RX 9070", "1080p_medium": "80.6% (159.1)", "1080p_ultra": "70.0% (110.4)", "1440p_ultra": "60.7% (86.9)", "4k_ultra": "50.0% (52.9)", "specifications": "Navi 48, 3584 shaders, 2520MHz, 16GB GDDR6@20Gbps, 640GB/s, 220W" },
+        { "graphics_card": "GeForce RTX 4070 Ti", "1080p_medium": "78.5% (155.1)", "1080p_ultra": "70.6% (111.3)", "1440p_ultra": "59.8% (85.5)", "4k_ultra": "47.1% (49.8)", "specifications": "AD104, 7680 shaders, 2610MHz, 12GB GDDR6X@21Gbps, 504GB/s, 285W" },
+        { "graphics_card": "GeForce RTX 5070", "1080p_medium": "75.5% (149.1)", "1080p_ultra": "68.1% (107.3)", "1440p_ultra": "56.8% (81.2)", "4k_ultra": "45.1% (47.7)", "specifications": "GB205, 6144 shaders, 2512MHz, 12GB GDDR7@28Gbps, 672GB/s, 250W" },
+        { "graphics_card": "GeForce RTX 4070 Super", "1080p_medium": "74.7% (147.6)", "1080p_ultra": "67.2% (105.9)", "1440p_ultra": "55.8% (79.7)", "4k_ultra": "43.4% (45.9)", "specifications": "AD104, 7168 shaders, 2475MHz, 12GB GDDR6X@21Gbps, 504GB/s, 220W" },
+        { "graphics_card": "Radeon RX 7900 GRE", "1080p_medium": "71.4% (140.9)", "1080p_ultra": "62.5% (98.5)", "1440p_ultra": "54.2% (77.5)", "4k_ultra": "43.1% (45.7)", "specifications": "Navi 31, 5120 shaders, 2245MHz, 16GB GDDR6@18Gbps, 576GB/s, 260W" },
+        { "graphics_card": "Radeon RX 7800 XT", "1080p_medium": "67.4% (133.2)", "1080p_ultra": "56.9% (89.7)", "1440p_ultra": "48.3% (69.0)", "4k_ultra": "38.4% (40.6)", "specifications": "Navi 32, 3840 shaders, 2430MHz, 16GB GDDR6@19.5Gbps, 624GB/s, 263W" },
+        { "graphics_card": "GeForce RTX 4070", "1080p_medium": "66.2% (130.7)", "1080p_ultra": "58.4% (92.1)", "1440p_ultra": "47.8% (68.3)", "4k_ultra": "37.2% (39.3)", "specifications": "AD104, 5888 shaders, 2475MHz, 12GB GDDR6X@21Gbps, 504GB/s, 200W" },
+        { "graphics_card": "GeForce RTX 5060 Ti 16GB", "1080p_medium": "60.9% (120.3)", "1080p_ultra": "53.5% (84.4)", "1440p_ultra": "43.6% (62.3)", "4k_ultra": "33.6% (35.6)", "specifications": "GB206, 4608 shaders, 2572MHz, 16GB GDDR7@28Gbps, 448GB/s, 180W" },
+        { "graphics_card": "Radeon RX 9060 XT 16GB", "1080p_medium": "59.6% (117.7)", "1080p_ultra": "51.0% (80.3)", "1440p_ultra": "41.5% (59.4)", "4k_ultra": "31.9% (33.8)", "specifications": "Navi 44, 2046 shaders, 3130MHz, 16GB GDDR6@20Gbps, 320GB/s, 160W" },
+        { "graphics_card": "Radeon RX 7700 XT", "1080p_medium": "58.0% (114.5)", "1080p_ultra": "49.8% (78.5)", "1440p_ultra": "42.4% (60.6)", "4k_ultra": "32.7% (34.6)", "specifications": "Navi 32, 3456 shaders, 2544MHz, 12GB GDDR6@18Gbps, 432GB/s, 245W" },
+        { "graphics_card": "GeForce RTX 5060 Ti 8GB", "1080p_medium": "59.6% (117.7)", "1080p_ultra": "50.8% (80.1)", "1440p_ultra": "39.2% (56.0)", "4k_ultra": "20.9% (22.2)", "specifications": "GB206, 4608 shaders, 2572MHz, 8GB GDDR7@28Gbps, 448GB/s, 180W" },
+        { "graphics_card": "GeForce RTX 4060 Ti 16GB", "1080p_medium": "52.3% (103.2)", "1080p_ultra": "46.1% (72.7)", "1440p_ultra": "36.7% (52.5)", "4k_ultra": "27.6% (29.2)", "specifications": "AD106, 4352 shaders, 2535MHz, 16GB GDDR6@18Gbps, 288GB/s, 160W" },
+        { "graphics_card": "GeForce RTX 4060 Ti 8GB", "1080p_medium": "52.4% (103.5)", "1080p_ultra": "45.5% (71.8)", "1440p_ultra": "34.5% (49.3)", "4k_ultra": "20.3% (21.5)", "specifications": "AD106, 4352 shaders, 2535MHz, 8GB GDDR6@18Gbps, 288GB/s, 160W" },
+        { "graphics_card": "GeForce RTX 5060", "1080p_medium": "52.0% (102.7)", "1080p_ultra": "44.5% (70.2)", "1440p_ultra": "31.9% (45.7)", "4k_ultra": "18.7% (19.8)", "specifications": "GB206, 3840 shaders, 2497MHz, 8GB GDDR7@28Gbps, 448GB/s, 160W" },
+        { "graphics_card": "Intel Arc B580", "1080p_medium": "40.5% (80.0)", "1080p_ultra": "35.1% (55.3)", "1440p_ultra": "29.8% (42.6)", "4k_ultra": "24.6% (26.0)", "specifications": "BMG-G21, 2560 shaders, 2850MHz, 12GB GDDR6@19Gbps, 456GB/s, 190W" },
+        { "graphics_card": "Radeon RX 7600 XT", "1080p_medium": "42.8% (84.6)", "1080p_ultra": "36.2% (57.0)", "1440p_ultra": "29.2% (41.7)", "4k_ultra": "21.4% (22.6)", "specifications": "Navi 33, 2048 shaders, 2755MHz, 16GB GDDR6@18Gbps, 288GB/s, 190W" },
+        { "graphics_card": "GeForce RTX 4060", "1080p_medium": "42.5% (83.9)", "1080p_ultra": "36.6% (57.7)", "1440p_ultra": "27.2% (38.9)", "4k_ultra": "16.0% (16.9)", "specifications": "AD107, 3072 shaders, 2460MHz, 8GB GDDR6@17Gbps, 272GB/s, 115W" },
+        { "graphics_card": "Intel Arc A770 16GB", "1080p_medium": "32.1% (63.4)", "1080p_ultra": "29.8% (46.9)", "1440p_ultra": "25.7% (36.7)", "4k_ultra": "21.0% (22.2)", "specifications": "ACM-G10, 4096 shaders, 2400MHz, 16GB GDDR6@17.5Gbps, 560GB/s, 225W" },
+        { "graphics_card": "GeForce RTX 3060 12GB", "1080p_medium": "35.5% (70.1)", "1080p_ultra": "30.7% (48.3)", "1440p_ultra": "24.4% (34.9)", "4k_ultra": "18.9% (20.0)", "specifications": "GA106, 3584 shaders, 1777MHz, 12GB GDDR6@15Gbps, 360GB/s, 170W" },
+        { "graphics_card": "Intel Arc B570", "1080p_medium": "36.6% (72.4)", "1080p_ultra": "30.3% (47.8)", "1440p_ultra": "24.7% (35.3)", "4k_ultra": "15.3% (16.2)", "specifications": "BMG-G21, 2304 shaders, 2750MHz, 10GB GDDR6@19Gbps, 380GB/s, 150W" },
+        { "graphics_card": "Intel Arc A750", "1080p_medium": "29.0% (57.4)", "1080p_ultra": "25.8% (40.7)", "1440p_ultra": "21.6% (30.9)", "4k_ultra": "15.9% (16.9)", "specifications": "ACM-G10, 3584 shaders, 2350MHz, 8GB GDDR6@16Gbps, 512GB/s, 225W" },
+        { "graphics_card": "Radeon RX 7600", "1080p_medium": "40.2% (79.3)", "1080p_ultra": "26.7% (42.2)", "1440p_ultra": "19.5% (27.9)", "4k_ultra": "12.0% (12.7)", "specifications": "Navi 33, 2048 shaders, 2655MHz, 8GB GDDR6@18Gbps, 288GB/s, 165W" },
+        { "graphics_card": "Intel Arc A580", "1080p_medium": "27.7% (54.7)", "1080p_ultra": "24.2% (38.2)", "1440p_ultra": "19.5% (27.8)", "4k_ultra": "15.4% (16.3)", "specifications": "ACM-G10, 3072 shaders, 2300MHz, 8GB GDDR6@16Gbps, 512GB/s, 185W" },
+        { "graphics_card": "Radeon RX 6600", "1080p_medium": "32.5% (64.1)", "1080p_ultra": "23.6% (37.2)", "1440p_ultra": "16.9% (24.1)", "4k_ultra": "11.6% (12.2)", "specifications": "Navi 23, 1792 shaders, 2491MHz, 8GB GDDR6@14Gbps, 224GB/s, 132W" }
+    ];
+
+    const gpuDataRayTracing = [
+        { "graphics_card": "GeForce RTX 5090", "1080p_medium": "98.5% (200.3)", "1080p_ultra": "100.0% (154.6)", "1440p_ultra": "100.0% (137.7)", "4k_ultra": "100.0% (89.6)", "specifications": "GB202, 21760 shaders, 2407MHz, 32GB GDDR7@28Gbps, 1792GB/s, 575W" },
+        { "graphics_card": "GeForce RTX 4090", "1080p_medium": "100.0% (203.3)", "1080p_ultra": "97.7% (151.1)", "1440p_ultra": "87.1% (119.9)", "4k_ultra": "79.3% (71.0)", "specifications": "AD102, 16384 shaders, 2520MHz, 24GB GDDR6X@21Gbps, 1008GB/s, 450W" },
+        { "graphics_card": "GeForce RTX 5080", "1080p_medium": "84.9% (172.6)", "1080p_ultra": "84.9% (131.2)", "1440p_ultra": "73.0% (100.5)", "4k_ultra": "63.7% (57.0)", "specifications": "GB203, 10752 shaders, 2617MHz, 16GB GDDR7@30Gbps, 690GB/s, 360W" },
+        { "graphics_card": "GeForce RTX 5070 Ti", "1080p_medium": "84.4% (171.5)", "1080p_ultra": "85.0% (131.4)", "1440p_ultra": "71.7% (98.7)", "4k_ultra": "62.4% (55.9)", "specifications": "GB203, 8960 shaders, 2452MHz, 16GB GDDR7@28Gbps, 896GB/s, 300W" },
+        { "graphics_card": "GeForce RTX 4080 Super", "1080p_medium": "91.3% (185.6)", "1080p_ultra": "83.5% (129.0)", "1440p_ultra": "68.8% (94.8)", "4k_ultra": "58.2% (52.1)", "specifications": "AD103, 10240 shaders, 2550MHz, 16GB GDDR6X@23Gbps, 736GB/s, 320W" },
+        { "graphics_card": "GeForce RTX 4080", "1080p_medium": "90.3% (183.6)", "1080p_ultra": "82.2% (127.0)", "1440p_ultra": "67.6% (93.1)", "4k_ultra": "56.8% (50.8)", "specifications": "AD103, 9728 shaders, 2505MHz, 16GB GDDR6X@22.4Gbps, 717GB/s, 320W" },
+        { "graphics_card": "GeForce RTX 4070 Ti Super", "1080p_medium": "82.0% (166.6)", "1080p_ultra": "72.9% (112.6)", "1440p_ultra": "58.0% (79.9)", "4k_ultra": "50.0% (44.7)", "specifications": "AD103, 8448 shaders, 2610MHz, 16GB GDDR6X@21Gbps, 672GB/s, 285W" },
+        { "graphics_card": "Radeon RX 9070 XT", "1080p_medium": "75.8% (154.0)", "1080p_ultra": "72.0% (111.2)", "1440p_ultra": "58.7% (80.9)", "4k_ultra": "50.0% (44.8)", "specifications": "Navi 48, 4096 shaders, 2970MHz, 16GB GDDR6@20Gbps, 640GB/s, 304W" },
+        { "graphics_card": "GeForce RTX 4070 Ti", "1080p_medium": "78.1% (158.8)", "1080p_ultra": "69.3% (107.2)", "1440p_ultra": "54.5% (75.1)", "4k_ultra": "44.6% (39.9)", "specifications": "AD104, 7680 shaders, 2610MHz, 12GB GDDR6X@21Gbps, 504GB/s, 285W" },
+        { "graphics_card": "Radeon RX 7900 XTX", "1080p_medium": "69.0% (140.2)", "1080p_ultra": "66.4% (102.6)", "1440p_ultra": "54.0% (74.3)", "4k_ultra": "44.9% (40.2)", "specifications": "Navi 31, 6144 shaders, 2500MHz, 24GB GDDR6@20Gbps, 960GB/s, 355W" },
+        { "graphics_card": "GeForce RTX 5070", "1080p_medium": "75.1% (152.6)", "1080p_ultra": "64.0% (98.9)", "1440p_ultra": "50.0% (68.9)", "4k_ultra": "41.6% (37.3)", "specifications": "GB205, 6144 shaders, 2512MHz, 12GB GDDR7@28Gbps, 672GB/s, 250W" },
+        { "graphics_card": "GeForce RTX 4070 Super", "1080p_medium": "73.7% (149.8)", "1080p_ultra": "64.2% (99.2)", "1440p_ultra": "49.7% (68.4)", "4k_ultra": "40.1% (35.9)", "specifications": "AD104, 7168 shaders, 2475MHz, 12GB GDDR6X@21Gbps, 504GB/s, 220W" },
+        { "graphics_card": "Radeon RX 9070", "1080p_medium": "68.6% (139.6)", "1080p_ultra": "63.7% (98.5)", "1440p_ultra": "50.8% (69.9)", "4k_ultra": "42.0% (37.7)", "specifications": "Navi 48, 3584 shaders, 2520MHz, 16GB GDDR6@20Gbps, 640GB/s, 220W" },
+        { "graphics_card": "Radeon RX 7900 XT", "1080p_medium": "64.4% (131.0)", "1080p_ultra": "59.2% (91.5)", "1440p_ultra": "46.6% (64.2)", "4k_ultra": "38.4% (34.4)", "specifications": "Navi 31, 5376 shaders, 2400MHz, 20GB GDDR6@20Gbps, 800GB/s, 315W" },
+        { "graphics_card": "GeForce RTX 4070", "1080p_medium": "65.4% (133.0)", "1080p_ultra": "54.9% (84.8)", "1440p_ultra": "42.7% (58.8)", "4k_ultra": "34.1% (30.5)", "specifications": "AD104, 5888 shaders, 2475MHz, 12GB GDDR6X@21Gbps, 504GB/s, 200W" },
+        { "graphics_card": "Radeon RX 7900 GRE", "1080p_medium": "62.1% (126.3)", "1080p_ultra": "51.5% (79.5)", "1440p_ultra": "40.4% (55.6)", "4k_ultra": "32.5% (29.1)", "specifications": "Navi 31, 5120 shaders, 2245MHz, 16GB GDDR6@18Gbps, 576GB/s, 260W" },
+        { "graphics_card": "GeForce RTX 5060 Ti 16GB", "1080p_medium": "59.9% (121.8)", "1080p_ultra": "48.7% (75.3)", "1440p_ultra": "37.7% (51.9)", "4k_ultra": "30.7% (27.5)", "specifications": "GB206, 4608 shaders, 2572MHz, 16GB GDDR7@28Gbps, 448GB/s, 180W" },
+        { "graphics_card": "Radeon RX 7800 XT", "1080p_medium": "52.7% (107.1)", "1080p_ultra": "46.0% (71.0)", "1440p_ultra": "35.7% (49.2)", "4k_ultra": "30.2% (27.0)", "specifications": "Navi 32, 3840 shaders, 2430MHz, 16GB GDDR6@19.5Gbps, 624GB/s, 263W" },
+        { "graphics_card": "Radeon RX 9060 XT 16GB", "1080p_medium": "53.8% (109.4)", "1080p_ultra": "44.1% (68.2)", "1440p_ultra": "33.8% (46.6)", "4k_ultra": "27.1% (24.3)", "specifications": "Navi 44, 2046 shaders, 3130MHz, 16GB GDDR6@20Gbps, 320GB/s, 160W" },
+        { "graphics_card": "GeForce RTX 4060 Ti 16GB", "1080p_medium": "51.7% (105.0)", "1080p_ultra": "41.5% (64.2)", "1440p_ultra": "32.0% (44.1)", "4k_ultra": "25.6% (22.9)", "specifications": "AD106, 4352 shaders, 2535MHz, 16GB GDDR6@18Gbps, 288GB/s, 160W" },
+        { "graphics_card": "Radeon RX 7700 XT", "1080p_medium": "48.0% (97.6)", "1080p_ultra": "41.8% (64.6)", "1440p_ultra": "32.4% (44.6)", "4k_ultra": "23.7% (21.3)", "specifications": "Navi 32, 3456 shaders, 2544MHz, 12GB GDDR6@18Gbps, 432GB/s, 245W" },
+        { "graphics_card": "Intel Arc B580", "1080p_medium": "42.4% (86.2)", "1080p_ultra": "37.6% (58.1)", "1440p_ultra": "29.7% (41.0)", "4k_ultra": "23.6% (21.1)", "specifications": "BMG-G21, 2560 shaders, 2850MHz, 12GB GDDR6@19Gbps, 456GB/s, 190W" },
+        { "graphics_card": "GeForce RTX 5060 Ti 8GB", "1080p_medium": "58.5% (118.9)", "1080p_ultra": "42.7% (66.1)", "1440p_ultra": "27.3% (37.6)", "4k_ultra": "16.2% (14.5)", "specifications": "GB206, 4608 shaders, 2572MHz, 8GB GDDR7@28Gbps, 448GB/s, 180W" },
+        { "graphics_card": "GeForce RTX 4060 Ti 8GB", "1080p_medium": "52.0% (105.7)", "1080p_ultra": "38.4% (59.3)", "1440p_ultra": "27.8% (38.3)", "4k_ultra": "17.8% (15.9)", "specifications": "AD106, 4352 shaders, 2535MHz, 8GB GDDR6@18Gbps, 288GB/s, 160W" },
+        { "graphics_card": "GeForce RTX 5060", "1080p_medium": "51.0% (103.7)", "1080p_ultra": "36.1% (55.8)", "1440p_ultra": "23.8% (32.8)", "4k_ultra": "14.1% (12.6)", "specifications": "GB206, 3840 shaders, 2497MHz, 8GB GDDR7@28Gbps, 448GB/s, 160W" },
+        { "graphics_card": "Intel Arc A770 16GB", "1080p_medium": "31.9% (64.9)", "1080p_ultra": "29.2% (45.1)", "1440p_ultra": "23.6% (32.5)", "4k_ultra": "19.4% (17.3)", "specifications": "ACM-G10, 4096 shaders, 2400MHz, 16GB GDDR6@17.5Gbps, 560GB/s, 225W" },
+        { "graphics_card": "GeForce RTX 4060", "1080p_medium": "42.5% (86.4)", "1080p_ultra": "30.1% (46.5)", "1440p_ultra": "21.3% (29.4)", "4k_ultra": "14.2% (12.8)", "specifications": "AD107, 3072 shaders, 2460MHz, 8GB GDDR6@17Gbps, 272GB/s, 115W" },
+        { "graphics_card": "GeForce RTX 3060 12GB", "1080p_medium": "32.5% (66.1)", "1080p_ultra": "27.6% (42.7)", "1440p_ultra": "20.7% (28.5)", "4k_ultra": "16.3% (14.6)", "specifications": "GA106, 3584 shaders, 1777MHz, 12GB GDDR6@15Gbps, 360GB/s, 170W" },
+        { "graphics_card": "Radeon RX 7600 XT", "1080p_medium": "31.6% (64.3)", "1080p_ultra": "26.2% (40.6)", "1440p_ultra": "19.6% (26.9)", "4k_ultra": "14.8% (13.3)", "specifications": "Navi 33, 2048 shaders, 2755MHz, 16GB GDDR6@18Gbps, 288GB/s, 190W" },
+        { "graphics_card": "Intel Arc B570", "1080p_medium": "34.1% (69.4)", "1080p_ultra": "30.3% (46.9)", "1440p_ultra": "23.9% (32.9)", "4k_ultra": "9.6% (8.6)", "specifications": "BMG-G21, 2304 shaders, 2750MHz, 10GB GDDR6@19Gbps, 380GB/s, 150W" },
+        { "graphics_card": "Intel Arc A750", "1080p_medium": "28.7% (58.5)", "1080p_ultra": "25.0% (38.7)", "1440p_ultra": "19.1% (26.3)", "4k_ultra": "12.1% (10.8)", "specifications": "ACM-G10, 3584 shaders, 2350MHz, 8GB GDDR6@16Gbps, 512GB/s, 225W" },
+        { "graphics_card": "Intel Arc A580", "1080p_medium": "29.0% (59.0)", "1080p_ultra": "24.0% (37.1)", "1440p_ultra": "16.2% (22.3)", "4k_ultra": "10.6% (9.5)", "specifications": "ACM-G10, 3072 shaders, 2300MHz, 8GB GDDR6@16Gbps, 512GB/s, 185W" },
+        { "graphics_card": "Radeon RX 7600", "1080p_medium": "29.8% (60.6)", "1080p_ultra": "18.6% (28.7)", "1440p_ultra": "11.7% (16.2)", "4k_ultra": "9.0% (8.1)", "specifications": "Navi 33, 2048 shaders, 2655MHz, 8GB GDDR6@18Gbps, 288GB/s, 165W" },
+        { "graphics_card": "Radeon RX 6600", "1080p_medium": "23.9% (48.6)", "1080p_ultra": "17.8% (27.5)", "1440p_ultra": "10.6% (14.5)", "4k_ultra": "7.8% (7.0)", "specifications": "Navi 23, 1792 shaders, 2491MHz, 8GB GDDR6@14Gbps, 224GB/s, 132W" }
+    ];
+
+    const gpuDataAIProViz = [
+        { "graphics_card": "GeForce RTX 5090", "ai_pro_viz_perf": "100.0% (862.8)", "specifications": "GB202, 21760 shaders, 2407MHz, 32GB GDDR7@28Gbps, 1792GB/s, 575W" },
+        { "graphics_card": "GeForce RTX 4090", "ai_pro_viz_perf": "78.9% (681.0)", "specifications": "AD102, 16384 shaders, 2520MHz, 24GB GDDR6X@21Gbps, 1008GB/s, 450W" },
+        { "graphics_card": "GeForce RTX 5080", "ai_pro_viz_perf": "69.8% (601.9)", "specifications": "GB203, 10752 shaders, 2617MHz, 16GB GDDR7@30Gbps, 690GB/s, 360W" },
+        { "graphics_card": "GeForce RTX 4080 Super", "ai_pro_viz_perf": "65.6% (565.7)", "specifications": "AD103, 10240 shaders, 2550MHz, 16GB GDDR6X@23Gbps, 736GB/s, 320W" },
+        { "graphics_card": "GeForce RTX 4080", "ai_pro_viz_perf": "63.5% (547.8)", "specifications": "AD103, 9728 shaders, 2505MHz, 16GB GDDR6X@22.4Gbps, 717GB/s, 320W" },
+        { "graphics_card": "GeForce RTX 5070 Ti", "ai_pro_viz_perf": "63.4% (547.3)", "specifications": "GB203, 8960 shaders, 2452MHz, 16GB GDDR7@28Gbps, 896GB/s, 300W" },
+        { "graphics_card": "GeForce RTX 4070 Ti Super", "ai_pro_viz_perf": "56.2% (485.1)", "specifications": "AD103, 8448 shaders, 2610MHz, 16GB GDDR6X@21Gbps, 672GB/s, 285W" },
+        { "graphics_card": "Radeon RX 9070 XT", "ai_pro_viz_perf": "55.2% (476.2)", "specifications": "Navi 48, 4096 shaders, 2970MHz, 16GB GDDR6@20Gbps, 640GB/s, 304W" },
+        { "graphics_card": "GeForce RTX 4070 Ti", "ai_pro_viz_perf": "53.5% (461.8)", "specifications": "AD104, 7680 shaders, 2610MHz, 12GB GDDR6X@21Gbps, 504GB/s, 285W" },
+        { "graphics_card": "Radeon RX 7900 XTX", "ai_pro_viz_perf": "52.6% (453.5)", "specifications": "Navi 31, 6144 shaders, 2500MHz, 24GB GDDR6@20Gbps, 960GB/s, 355W" },
+        { "graphics_card": "GeForce RTX 5070", "ai_pro_viz_perf": "51.9% (447.7)", "specifications": "GB205, 6144 shaders, 2512MHz, 12GB GDDR7@28Gbps, 672GB/s, 250W" },
+        { "graphics_card": "Radeon RX 9070", "ai_pro_viz_perf": "51.8% (446.8)", "specifications": "Navi 48, 3584 shaders, 2520MHz, 16GB GDDR6@20Gbps, 640GB/s, 220W" },
+        { "graphics_card": "GeForce RTX 4070 Super", "ai_pro_viz_perf": "50.7% (437.3)", "specifications": "AD104, 7168 shaders, 2475MHz, 12GB GDDR6X@21Gbps, 504GB/s, 220W" },
+        { "graphics_card": "Radeon RX 7900 XT", "ai_pro_viz_perf": "47.4% (409.1)", "specifications": "Navi 31, 5376 shaders, 2400MHz, 20GB GDDR6@20Gbps, 800GB/s, 315W" },
+        { "graphics_card": "GeForce RTX 4070", "ai_pro_viz_perf": "44.2% (381.0)", "specifications": "AD104, 5888 shaders, 2475MHz, 12GB GDDR6X@21Gbps, 504GB/s, 200W" },
+        { "graphics_card": "Radeon RX 7900 GRE", "ai_pro_viz_perf": "42.7% (368.0)", "specifications": "Navi 31, 5120 shaders, 2245MHz, 16GB GDDR6@18Gbps, 576GB/s, 260W" },
+        { "graphics_card": "GeForce RTX 5060 Ti 16GB", "ai_pro_viz_perf": "40.1% (346.2)", "specifications": "GB206, 4608 shaders, 2572MHz, 16GB GDDR7@28Gbps, 448GB/s, 180W" },
+        { "graphics_card": "Radeon RX 7800 XT", "ai_pro_viz_perf": "38.8% (334.8)", "specifications": "Navi 32, 3840 shaders, 2430MHz, 16GB GDDR6@19.5Gbps, 624GB/s, 263W" },
+        { "graphics_card": "Radeon RX 7700 XT", "ai_pro_viz_perf": "35.0% (302.2)", "specifications": "Navi 32, 3456 shaders, 2544MHz, 12GB GDDR6@18Gbps, 432GB/s, 245W" },
+        { "graphics_card": "Radeon RX 9060 XT 16GB", "ai_pro_viz_perf": "34.8% (300.5)", "specifications": "Navi 44, 2046 shaders, 3130MHz, 16GB GDDR6@20Gbps, 320GB/s, 160W" },
+        { "graphics_card": "GeForce RTX 4060 Ti 16GB", "ai_pro_viz_perf": "33.9% (292.1)", "specifications": "AD106, 4352 shaders, 2535MHz, 16GB GDDR6@18Gbps, 288GB/s, 160W" },
+        { "graphics_card": "GeForce RTX 5060 Ti 8GB", "ai_pro_viz_perf": "33.2% (286.2)", "specifications": "GB206, 4608 shaders, 2572MHz, 8GB GDDR7@28Gbps, 448GB/s, 180W" },
+        { "graphics_card": "GeForce RTX 4060 Ti 8GB", "ai_pro_viz_perf": "32.7% (281.8)", "specifications": "AD106, 4352 shaders, 2535MHz, 8GB GDDR6@18Gbps, 288GB/s, 160W" },
+        { "graphics_card": "GeForce RTX 5060", "ai_pro_viz_perf": "31.3% (270.0)", "specifications": "GB206, 3840 shaders, 2497MHz, 8GB GDDR7@28Gbps, 448GB/s, 160W" },
+        { "graphics_card": "GeForce RTX 4060", "ai_pro_viz_perf": "27.8% (240.1)", "specifications": "AD107, 3072 shaders, 2460MHz, 8GB GDDR6@17Gbps, 272GB/s, 115W" },
+        { "graphics_card": "Intel Arc B580", "ai_pro_viz_perf": "26.3% (227.3)", "specifications": "BMG-G21, 2560 shaders, 2850MHz, 12GB GDDR6@19Gbps, 456GB/s, 190W" },
+        { "graphics_card": "Intel Arc A770 16GB", "ai_pro_viz_perf": "24.8% (214.2)", "specifications": "ACM-G10, 4096 shaders, 2400MHz, 16GB GDDR6@17.5Gbps, 560GB/s, 225W" },
+        { "graphics_card": "Radeon RX 7600 XT", "ai_pro_viz_perf": "24.4% (210.3)", "specifications": "Navi 33, 2048 shaders, 2755MHz, 16GB GDDR6@18Gbps, 288GB/s, 190W" },
+        { "graphics_card": "GeForce RTX 3060 12GB", "ai_pro_viz_perf": "23.1% (199.1)", "specifications": "GA106, 3584 shaders, 1777MHz, 12GB GDDR6@15Gbps, 360GB/s, 170W" },
+        { "graphics_card": "Intel Arc A750", "ai_pro_viz_perf": "22.8% (196.7)", "specifications": "ACM-G10, 3584 shaders, 2350MHz, 8GB GDDR6@16Gbps, 512GB/s, 225W" },
+        { "graphics_card": "Intel Arc B570", "ai_pro_viz_perf": "22.1% (190.5)", "specifications": "BMG-G21, 2304 shaders, 2750MHz, 10GB GDDR6@19Gbps, 380GB/s, 150W" },
+        { "graphics_card": "Radeon RX 7600", "ai_pro_viz_perf": "21.7% (187.4)", "specifications": "Navi 33, 2048 shaders, 2655MHz, 8GB GDDR6@18Gbps, 288GB/s, 165W" },
+        { "graphics_card": "Intel Arc A580", "ai_pro_viz_perf": "20.7% (178.8)", "specifications": "ACM-G10, 3072 shaders, 2300MHz, 8GB GDDR6@16Gbps, 512GB/s, 185W" },
+        { "graphics_card": "GeForce RTX 3050 8GB", "ai_pro_viz_perf": "16.6% (143.5)", "specifications": "GA106, 2560 shaders, 1777MHz, 8GB GDDR6@14Gbps, 224GB/s, 130W" },
+        { "graphics_card": "Radeon RX 6600", "ai_pro_viz_perf": "15.2% (130.8)", "specifications": "Navi 23, 1792 shaders, 2491MHz, 8GB GDDR6@14Gbps, 224GB/s, 132W" }
+    ];
+
+    const gpuHeaders = {
+        rasterization: [
+            { key: 'graphics_card', label: 'Graphics Card' },
+            { key: '1080p_medium', label: '1080p Medium' },
+            { key: '1080p_ultra', label: '1080p Ultra' },
+            { key: '1440p_ultra', label: '1440p Ultra' },
+            { key: '4k_ultra', label: '4K Ultra' },
+            { key: 'specifications', label: 'Specifications' }
+        ],
+        raytracing: [
+            { key: 'graphics_card', label: 'Graphics Card' },
+            { key: '1080p_medium', label: '1080p Medium' },
+            { key: '1080p_ultra', label: '1080p Ultra' },
+            { key: '1440p_ultra', label: '1440p Ultra' },
+            { key: '4k_ultra', label: '4K Ultra' },
+            { key: 'specifications', label: 'Specifications' }
+        ],
+        aiproviz: [
+            { key: 'graphics_card', label: 'Graphics Card' },
+            { key: 'ai_pro_viz_perf', label: 'AI / Pro / Viz' },
+            { key: 'specifications', label: 'Specifications' }
+        ]
+    };
+
+    function loadGpuData() {
+        const tbody = document.getElementById('gpu-table-body');
+        const thead = document.getElementById('gpu-table-header');
+        if (!tbody || !thead) return;
+        
+        let data;
+        let headers;
+        
+        if (currentGpuCategory === 'rasterization') {
+            data = gpuDataRasterization;
+            headers = gpuHeaders.rasterization;
+        } else if (currentGpuCategory === 'raytracing') {
+            data = gpuDataRayTracing;
+            headers = gpuHeaders.raytracing;
+        } else {
+            data = gpuDataAIProViz;
+            headers = gpuHeaders.aiproviz;
+        }
+        
+        thead.innerHTML = headers.map(h => `<th>${h.label}</th>`).join('');
+        
+        tbody.innerHTML = '';
+        
+        data.forEach(gpu => {
+            const tr = document.createElement('tr');
+            let cells = headers.map(h => {
+                if (h.key === 'specifications') {
+                    return `<td class="gpu-specs-cell" title="${gpu[h.key] || ''}">${gpu[h.key] || '-'}</td>`;
+                }
+                return `<td>${gpu[h.key] || '-'}</td>`;
+            }).join('');
+            tr.innerHTML = cells;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function setupGpuTabs() {
+        document.querySelectorAll('.gpu-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.gpu-tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentGpuCategory = btn.dataset.category;
+                loadGpuData();
+            });
+        });
     }
 
     function renderCategoryPools() {

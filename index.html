@@ -32,6 +32,7 @@
                 <button id="inventory-btn" class="nav-btn" data-shortcut="4">INVENTORY</button>
                 <button id="setup-btn" class="nav-btn" data-shortcut="5">SETUP</button>
                 <button id="inquiries-btn" class="nav-btn" data-shortcut="6">INQUIRIES</button>
+                <button id="gpu-list-btn" class="nav-btn" data-shortcut="7">GPU LIST</button>
             </div>
             <div class="nav-right">
                 <input type="text" id="global-search" class="global-search" placeholder="Search item code... (Ctrl+K)">
@@ -249,6 +250,27 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+
+        <div id="gpu-list-page" class="page">
+            <div class="gpu-list-header">
+                <h2>GPU BENCHMARKS HIERARCHY</h2>
+            </div>
+            <div class="gpu-category-tabs">
+                <button class="gpu-tab-btn active" data-category="rasterization">Rasterization</button>
+                <button class="gpu-tab-btn" data-category="raytracing">Ray Tracing</button>
+                <button class="gpu-tab-btn" data-category="aiproviz">AI / Professional / Content</button>
+            </div>
+            <div class="table-container">
+                <table id="gpu-table">
+                    <thead>
+                        <tr id="gpu-table-header">
+                        </tr>
+                    </thead>
+                    <tbody id="gpu-table-body">
+                    </tbody>
+                </table>
             </div>
         </div>
 
